@@ -1,0 +1,41 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node (Phase 9 / Supabase CLI)
+node_modules/
+.next/
+
+# Data stores (parquet bars, exports)
+data/
+*.parquet
+*.csv
+!prompt-library/**/*.csv
+
+# n8n local state
+n8n/data/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

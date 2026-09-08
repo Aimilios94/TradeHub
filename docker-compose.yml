@@ -1,0 +1,42 @@
+# TradeHub local stack — this Windows PC (Docker Desktop, WSL2 backend).
+# Ollama runs NATIVELY on Windows (GPU access), not in this compose file; the engine
+# reaches it via host.docker.internal:11434 (see .env.example OLLAMA_BASE_URL).
+
+services:
+  engine:
+    build: ./engine
+    container_name: tradehub-engine
+    env_file: .env
+    environment:
+      TZ: America/New_York
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./prompt-library:/srv/prompt-library:ro
+      - ./data:/srv/engine/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: tradehub-n8n
+    environment:
+      GENERIC_TIMEZONE: America/New_York   # every cron in the app is defined in ET (plan §4 timeline)
+      TZ: America/New_York
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/  # replaced by the Cloudflare Tunnel / Tailscale URL in Phase 8
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-me-before-first-run}
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./n8n/data:/home/node/.n8n
+      - ./n8n/workflows:/srv/workflows:ro
+    restart: unless-stopped
+    depends_on:
+      - engine
