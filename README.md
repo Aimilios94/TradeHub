@@ -33,7 +33,10 @@ docker-compose.yml     engine + n8n
    .\.venv\Scripts\python -m uvicorn app.main:app --reload     # http://localhost:8000/health, /plugins, /seed/strategies
    ```
 3. **Database:** create a Supabase project → SQL editor → run `supabase/migrations/0001_core_schema.sql` then `0002_seed.sql`. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
-4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`.
+4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`. Comments must be on their own lines (the dotenv loader treats a same-line `#` as part of the value). Check readiness any time:
+   ```powershell
+   cd engine; .\.venv\Scripts\python scripts\check_env.py     # OK / MISSING / FAIL per key, tests each one live, never prints secrets
+   ```
 5. **Stack:** `docker compose up -d` (engine on :8000, n8n on :5678, both in `America/New_York`).
 
 ## Regenerating the seed
