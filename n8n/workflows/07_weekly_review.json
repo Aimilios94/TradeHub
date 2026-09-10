@@ -1,0 +1,93 @@
+{
+  "name": "07 Weekly review Sun 09:00 ET",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000001",
+      "name": "Sun 09:00 ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "app_settings.scanner_schedule.weekly_autopsy. The Sunday ritual."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/review/weekly",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 1800000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000002",
+      "name": "POST /review/weekly",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Template 05 batched (one coaching autopsy per closed trade) -> analytics (plan section 14) -> template 06 on the 405B: lessons + testable hypotheses. Every proposal is vetted in code before it is stored: it may not loosen a risk limit, may not name a plugin outside the registry, and may not repeat a rejected idea. Nothing is ever applied - a hypothesis waits for a Phase 7 backtest and the owner's approval."
+    }
+  ],
+  "connections": {
+    "Sun 09:00 ET": {
+      "main": [
+        [
+          {
+            "node": "POST /review/weekly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-6"
+    }
+  ]
+}

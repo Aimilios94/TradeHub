@@ -12,7 +12,7 @@ Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_i
 
 ## Repository layout
 ```
-engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/{exits,backtest,analytics}/
+engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/{exits,backtest}/
   scripts/gen_seed.py   generates supabase/migrations/0002_seed.sql (single source of truth = Python + prompt-library)
   tests/                pytest
 supabase/migrations/   0001_core_schema.sql · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql · 0004_symbol_stats.sql
@@ -32,12 +32,14 @@ docker-compose.yml     engine + n8n
    .\.venv\Scripts\python -m pip install -e ".[dev]"
    .\.venv\Scripts\python -m pytest -q
    .\.venv\Scripts\python -m uvicorn app.main:app --reload     # http://localhost:8000/health, /plugins, /seed/strategies, /docs
-   # /data/*, /scan/*, /enrich/*, /signals/* and /execute/* need:  -H "Authorization: Bearer <ENGINE_API_TOKEN>"
+   # every endpoint below /data, /scan, /enrich, /signals, /execute, /journal, /analytics, /review needs:
+   #   -H "Authorization: Bearer <ENGINE_API_TOKEN>"
    #   e.g. GET /data/premarket/PLUG · POST /scan/run?kind=morning&dry_run=true · GET /scan/latest · GET /scan/universe/PLUG
    #        GET /enrich/status · POST /enrich/run?symbols=AMD&dry_run=true · GET /enrich/AMD
    #        GET /signals/status · POST /signals/plan?dry_run=true · GET /signals/latest · GET /signals/briefing
    #        GET /execute/status · POST /execute/gate/preview?signal_id=… · POST /execute/deploy?signal_id=…
    #        POST /execute/kill-switch?engage=true · GET /execute/orders · GET /execute/compliance
+   #        POST /journal/eod · GET /analytics/report · GET /analytics/ledger · POST /review/weekly
    ```
 3. **Database:** create a Supabase project → apply `supabase/migrations/` in order (0001 schema, 0002 seed, 0003 pre-market profile, 0004 symbol_stats, 0005 briefings). From this PC use the session-pooler `SUPABASE_DB_URL` and `engine\.venv\Scripts\python -c "...psycopg..."` or the SQL editor. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
 4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`. Comments must be on their own lines (the dotenv loader treats a same-line `#` as part of the value). Check readiness any time:
@@ -69,7 +71,8 @@ three gotchas (batch tag collision, Git Bash path mangling, imports arrive inact
 | 3 | `/enrich/run`: Finnhub + Yahoo RSS → local `hermes3:8b` condenser → `news_sentiment`, catalyst written back onto `scans`; n8n cron 02 chains it after the morning scan | **done 2026-09-10** (Reddit implemented but inert until its keys arrive) |
 | 4 | `/signals/plan`: in-play gate (template 04) → trade plans (02) → `signals`, watchlist briefing (03) → `briefings`; every planned price re-validated in code | **done 2026-09-10** (proposals only — nothing executes) |
 | 5 | `/execute/*`: Telegram Deploy tap → enforcing Guardian Layer-1 gate → limit order → `orders`; synthetic pre-market stop in its own container; 09:31 OCO attach; kill switch | **done 2026-09-10** (paper only — live is refused in code until Phase 8) |
-| 6 / 6.5 | journal, ledger, analytics, weekly autopsy → hypotheses, Guardian briefing | |
+| 6 | `/journal/eod` (FIFO round trips + Guardian Layer-2 ledger), `/analytics/report` (§14), `/review/weekly` (templates 05+06 → `hypotheses`), degradation trigger; n8n crons 06/07 | **done 2026-09-10** (proposals only — nothing is auto-applied) |
+| 6.5 | Guardian briefing (Layer 3) + monthly rules-freshness job | |
 | 7 | backtest engine + S1–S8 baselines + S6 vs S7 | |
 | 8 | hardening, onboarding, failure policy, tunnel, then ≥ 4-week paper month | |
 | 9 | UI (React + Tailwind against the mockup) | |

@@ -169,3 +169,47 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     accounting, was refused on a second deploy (409), and was cancelled cleanly. The kill switch refused a
     submission before the broker was contacted, and the live lockout refused `paper_mode=false`. The test
     signal and its order row were deleted afterwards so they cannot pollute Phase 6 analytics.
+
+## 2026-09-10 — Phase 6
+
+45. **The journal is built from real fills, FIFO, one row per closed round trip.** A scale-in averages the
+    entry, a scale-out averages the exit and keeps the trip open until flat, and a fill that flips long
+    straight to short splits into two trips. Anything still open at the end of the day is reported as open
+    and never written as a closed trade. Lot-level tax accounting is deliberately not attempted: §14 asks
+    for per-trade coaching and strategy statistics, where the round trip is the unit.
+46. **A paper account is never charged SEC/TAF**, discovered when the activities endpoint returned FILL
+    rows and no fee rows for a real round trip (2026-09-10). Guardian Layer 2 therefore reads the broker's
+    fees when they exist and otherwise computes them from the published rates, marking the row
+    `estimated: true` and saying so in the Telegram summary. The rates live in `app_settings.fee_model`
+    because the SEC rate resets annually. An estimate that is labelled is honest; an estimate presented as
+    a charge is what §33 forbids. Also: `alpaca-py` 0.44 dropped its activities helper, so this calls
+    `/account/activities` through the client's raw `get()`.
+47. **`r_multiple` is null when there is no plan.** R is measured against the risk that was *planned*, so a
+    manual ticket or an unlinked fill gets no R rather than one invented from the fill price. The same rule
+    governs `spread_cost`, which needs the `quote_mid_at_submit` Phase 5 records at order time: no
+    recorded midpoint means zero, not a guess.
+48. **Win rate is displayed and never gates anything** (§20), and every breakdown carries its trade count
+    plus `sufficient`. With one closed trade the analytics says so in its own flags — "below the 100 needed
+    to judge anything; treat every number here as provisional" — rather than presenting a 0% win rate as
+    though it meant something.
+49. **Two analytics bugs the first real trade exposed**, both fixed: `max_drawdown` measured from the first
+    trade rather than from zero, so an account that had only ever lost money reported a 0.00 drawdown; and
+    `largest_win` was taken from all trades rather than from the winners, so with no winners it reported
+    the least-bad loss as the best win.
+50. **The weekly review's guards are in code, not in the prompt.** A prompt is a request; these are rules.
+    A proposal is discarded if it loosens any Guardian risk limit (§20), names a detector or exit plugin
+    outside the registry, names a strategy that does not exist, repeats a previously rejected idea, or is a
+    parameter change with no config diff to test. Rejected hypotheses are kept forever as anti-re-suggestion
+    memory.
+51. **The degradation trigger needs no model.** A strategy with negative expectancy over a sufficient sample
+    (a tenth of the promotion bar, floor 5 trades) raises its own `review` hypothesis with
+    `source = degradation_alert`. It is the defensive twin of the weekly improvement loop and runs even when
+    the LLM call fails.
+52. **Nothing in Phase 6 changes a strategy.** `/review/hypotheses/{id}/decide` records `promoted` as a
+    decision only — applying a config diff waits for the Phase 7 backtest that grades it. Verified live:
+    the first weekly run proposed **zero** hypotheses off one trade, which is the early-life guard working
+    exactly as §20 intends.
+53. **End-to-end proof (2026-09-10):** a real 1-share AAPL paper round trip produced a journal row
+    (net −0.1692 = −0.16 gross less 0.0092 estimated fees), three ledger rows, a correct 13:30-14:30 time
+    block, a null R (no plan), an honest autopsy that marked both playbook rules "unknown" rather than
+    guessing, and an idempotent second EOD run that wrote 0 and skipped 1.

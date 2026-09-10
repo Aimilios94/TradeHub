@@ -11,8 +11,8 @@ Planned workflows (one file each, added per phase):
 | `03_scan_midday.json` | cron 11:30 Mon–Fri | `POST /scan/run?kind=midday` | 2 ✅ |
 | `04_deploy_telegram.json` | Telegram button tap | `POST /execute/telegram/callback` → gate → order | 5 ✅ |
 | `05_oco_attach_0930.json` | cron 09:31 Mon–Fri | `POST /execute/oco/attach` → `POST /execute/orders/sync` | 5 ✅ |
-| `06_eod_journal.json` | cron 16:30 | `POST /journal/eod` | 6 |
-| `07_weekly_autopsy.json` | cron Sun 09:00 | `POST /review/weekly` | 6 |
+| `06_eod_journal.json` | cron 16:30 Mon–Fri | `POST /execute/orders/sync` → `POST /journal/eod` | 6 ✅ |
+| `07_weekly_review.json` | cron Sun 09:00 | `POST /review/weekly` (templates 05+06 → `hypotheses`) | 6 ✅ |
 | `08_guardian_briefing.json` | webhook (button) | `POST /guardian/briefing` | 6.5 |
 | `09_rules_freshness_monthly.json` | cron 1st 10:00 | `POST /guardian/rules-check` | 6.5 |
 | `10_telegram_alerts.json` | webhook from engine | Telegram | not needed — the engine sends its own alerts directly |

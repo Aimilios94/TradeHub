@@ -1,0 +1,135 @@
+{
+  "name": "06 EOD journal 16:30 ET",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 16 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000001",
+      "name": "16:30 ET Mon-Fri",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "After the close. app_settings.scanner_schedule.eod_journal."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/execute/orders/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 600000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000002",
+      "name": "POST /execute/orders/sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Reconcile the day's orders against Alpaca first, so the journal is built from settled truth."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/journal/eod",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000003",
+      "name": "POST /journal/eod",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "The day's closed round trips -> `journal` (FIFO matched from real fills), and their costs -> `guardian_ledger`: fees, realized spread cost, realized P&L, running tax provision. Idempotent - a trade already journalled is skipped, so a re-run cannot double-count."
+    }
+  ],
+  "connections": {
+    "16:30 ET Mon-Fri": {
+      "main": [
+        [
+          {
+            "node": "POST /execute/orders/sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /execute/orders/sync": {
+      "main": [
+        [
+          {
+            "node": "POST /journal/eod",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-6"
+    }
+  ]
+}

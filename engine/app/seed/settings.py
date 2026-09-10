@@ -101,6 +101,19 @@ APP_SETTINGS: dict[str, dict] = {
             "execution is Phase 5."
         ),
     },
+    "fee_model": {
+        "value": {
+            "sec_fee_per_dollar": 0.0000278,
+            "taf_per_share": 0.000166,
+            "taf_max": 8.30,
+        },
+        "description": (
+            "Regulatory fees on SELLS, used by Guardian Layer 2 (plan §11) when the broker reports none. "
+            "A PAPER account is never charged SEC/TAF, so the ledger computes an estimate from these "
+            "published rates and marks the row `estimated: true` — never presented as an actual charge "
+            "(docs/DECISIONS.md #46). The SEC rate is reset annually; update it here, not in code."
+        ),
+    },
     "failure_policy": {
         "value": {
             "broker_unreachable": "block entries, telegram alert, red banner, synthetic monitor fallback, escalate",

@@ -40,7 +40,7 @@ These are **proposals only**. You see them; nothing acts on them.
 
 ---
 
-## ✅ Phase 5 — Execution  ← you are here, just finished
+## ✅ Phase 5 — Execution
 Orders can now reach the broker — but only your paper account, and only when you approve.
 
 - **Deploy button in Telegram** — each signal arrives as a card with ✅ Deploy / ✖️ Cancel.
@@ -57,11 +57,23 @@ Orders can now reach the broker — but only your paper account, and only when y
 Three things it refuses to do: place a live-money order, place anything while the kill switch is on,
 or place a pre-market order type the broker would silently ignore.
 
-## ⬜ Phase 6 — Journal & analytics *(next)*
-Records every finished trade, the real P&L after fees, and what worked. Weekly review turns your own
-results into ideas to test. This is what starts feeding lessons back into the morning plans.
+## ✅ Phase 6 — Journal & analytics  ← you are here, just finished
+The system starts learning from you.
 
-## ⬜ Phase 6.5 — Guardian briefing
+- **Every finished trade is recorded automatically at 16:30** — what you actually paid, what you actually
+  made, and how far it drifted from the plan.
+- **Real costs, not guesses** — fees and the spread you paid are tracked per trade, plus a running
+  28% tax provision (display only, confirm with an accountant).
+- **Your numbers** — win rate, expectancy, best and worst time of day, best and worst setup, losing
+  streaks. It tells you when there is not enough data to judge yet, instead of pretending.
+- **A coach note per trade** — did you follow your own rules, what pattern is showing, what to fix.
+  You can add your own note and it gets read too.
+- **Sunday review** — turns the week into lessons and concrete suggestions to test.
+
+Suggestions are never applied on their own. Anything that would loosen a risk limit is thrown out
+automatically, and the rest waits for a backtest (Phase 7) and your approval.
+
+## ⬜ Phase 6.5 — Guardian briefing *(next)*
 A plain-English "here's your risk right now" summary on demand.
 
 ## ⬜ Phase 7 — Backtest engine
