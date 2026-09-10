@@ -24,6 +24,25 @@ services:
       timeout: 5s
       retries: 3
 
+  # The synthetic pre-market stop (plan §12 rule 3). Its OWN container on purpose: rebuilding the engine
+  # after a code change must never take the stop down while a position is open, and a crash here restarts
+  # only this. Reuses the engine image — same code, different entrypoint.
+  monitor:
+    build: ./engine
+    container_name: tradehub-monitor
+    env_file: .env
+    environment:
+      TZ: America/New_York
+      MONITOR_REFRESH_SECONDS: "30"      # how often the watch list is rebuilt from open positions
+      MONITOR_SLIP_THROUGH_PCT: "0.5"    # how far through the stop the exit limit is priced
+      MONITOR_HEARTBEAT_MINUTES: "0"     # >0 sends a periodic "still alive" Telegram message
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["python", "-m", "app.monitor.synthetic_stop"]
+    restart: unless-stopped
+    depends_on:
+      - engine
+
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: tradehub-n8n

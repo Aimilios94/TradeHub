@@ -145,6 +145,37 @@
         }
       },
       "notes": "Phase 4: template 04 in-play gate -> template 02 trade plans -> `signals`, plus the S2 watchlist briefing (template 03) -> `briefings`. Hosted Hermes 70B via OpenRouter, ~1c a morning. Plans are PROPOSALS: every price is re-validated in code and a failing plan is stored rejected with its reason. Nothing is executed here — approval is Phase 5."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/execute/push-signals",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000005",
+      "name": "POST /execute/push-signals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Phase 5: pushes today's proposed signals to Telegram as cards with Deploy / Cancel buttons. Tapping Deploy runs workflow 04, which re-checks the kill switch and the full Guardian gate before any order is placed. Nothing is automatic."
     }
   ],
   "connections": {
@@ -180,6 +211,17 @@
           }
         ]
       ]
+    },
+    "POST /signals/plan": {
+      "main": [
+        [
+          {
+            "node": "POST /execute/push-signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -200,6 +242,9 @@
     },
     {
       "name": "phase-4"
+    },
+    {
+      "name": "phase-5"
     }
   ]
 }

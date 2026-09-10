@@ -29,25 +29,40 @@ OUT_DIR = REPO_ROOT / "n8n" / "data" / "import"
 CONTAINER_DIR = "/home/node/.n8n/import"
 CREDENTIAL_NAME = "TradeHub Engine token"
 CREDENTIAL_ID = "tradehub-engine-token"
+TELEGRAM_CREDENTIAL_NAME = "TradeHub Telegram bot"
+TELEGRAM_CREDENTIAL_ID = "tradehub-telegram-bot"
+
+
+def env_value(key: str) -> str:
+    env = REPO_ROOT / ".env"
+    for line in env.read_text(encoding="utf-8").splitlines():
+        if line.startswith(f"{key}="):
+            value = line.split("=", 1)[1].strip().strip('"').strip("'")
+            if value:
+                return value
+    raise SystemExit(f"{key} is empty or missing in .env")
 
 
 def engine_token() -> str:
-    env = REPO_ROOT / ".env"
-    for line in env.read_text(encoding="utf-8").splitlines():
-        if line.startswith("ENGINE_API_TOKEN="):
-            token = line.split("=", 1)[1].strip().strip('"').strip("'")
-            if token:
-                return token
-    raise SystemExit("ENGINE_API_TOKEN is empty or missing in .env")
+    return env_value("ENGINE_API_TOKEN")
 
 
 def build() -> tuple[dict, list[tuple[str, list]]]:
-    credentials = [{
-        "id": CREDENTIAL_ID,
-        "name": CREDENTIAL_NAME,
-        "type": "httpHeaderAuth",
-        "data": {"name": "Authorization", "value": f"Bearer {engine_token()}"},
-    }]
+    credentials = [
+        {
+            "id": CREDENTIAL_ID,
+            "name": CREDENTIAL_NAME,
+            "type": "httpHeaderAuth",
+            "data": {"name": "Authorization", "value": f"Bearer {engine_token()}"},
+        },
+        {
+            # the Telegram Trigger node needs the bot token to receive Deploy / Cancel button taps
+            "id": TELEGRAM_CREDENTIAL_ID,
+            "name": TELEGRAM_CREDENTIAL_NAME,
+            "type": "telegramApi",
+            "data": {"accessToken": env_value("TELEGRAM_BOT_TOKEN"), "baseUrl": "https://api.telegram.org"},
+        },
+    ]
     workflows = []
     for path in sorted(WORKFLOW_DIR.glob("*.json")):
         wf = json.loads(path.read_text(encoding="utf-8"))
@@ -60,6 +75,10 @@ def build() -> tuple[dict, list[tuple[str, list]]]:
             if cred is not None:
                 cred["id"] = CREDENTIAL_ID
                 cred["name"] = CREDENTIAL_NAME
+            tg = node.get("credentials", {}).get("telegramApi")
+            if tg is not None:
+                tg["id"] = TELEGRAM_CREDENTIAL_ID
+                tg["name"] = TELEGRAM_CREDENTIAL_NAME
         workflows.append((path.stem, [wf]))
     return credentials, workflows
 

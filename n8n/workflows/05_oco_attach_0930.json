@@ -1,0 +1,126 @@
+{
+  "name": "05 Attach OCO 09:30 ET",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "31 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000001",
+      "name": "09:31 ET Mon-Fri",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "One minute after the open, not on the bell: real stops are only accepted during regular hours (plan §3.4), and firing at 09:30:00 exactly risks landing a second early."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/execute/oco/attach",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000002",
+      "name": "POST /execute/oco/attach",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Every open position with a plan gets a real broker-side OCO (take-profit + stop-loss), replacing the synthetic monitor's cover. Idempotent: a position already carrying a resting stop or OCO is skipped, and a position with no plan is reported to compliance_events rather than guessed at."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/execute/orders/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000003",
+      "name": "POST /execute/orders/sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Reconcile stored orders against Alpaca — pre-market fills, cancels and rejections that happened while nothing was watching."
+    }
+  ],
+  "connections": {
+    "09:31 ET Mon-Fri": {
+      "main": [
+        [
+          {
+            "node": "POST /execute/oco/attach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /execute/oco/attach": {
+      "main": [
+        [
+          {
+            "node": "POST /execute/orders/sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-5"
+    }
+  ]
+}

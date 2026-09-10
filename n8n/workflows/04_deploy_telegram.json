@@ -1,0 +1,82 @@
+{
+  "name": "04 Deploy from Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["callback_query"],
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000001",
+      "name": "Deploy / Cancel tap",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "TradeHub Telegram bot"
+        }
+      },
+      "notes": "Fires when the owner taps a button under a signal card. Only callback_query updates are subscribed — ordinary chat messages are ignored."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/execute/telegram/callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000002",
+      "name": "POST /execute/telegram/callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "The engine re-loads the signal, re-checks the kill switch and re-runs the FULL Guardian Layer-1 gate before anything is submitted. The tap carries only an action and a signal id — it cannot bypass a check. Non-owner chats are rejected with 403. neverError is on so a 409 (already deployed) does not mark the execution failed; the engine has already answered the user in Telegram."
+    }
+  ],
+  "connections": {
+    "Deploy / Cancel tap": {
+      "main": [
+        [
+          {
+            "node": "POST /execute/telegram/callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-5"
+    }
+  ]
+}

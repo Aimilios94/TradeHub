@@ -123,3 +123,49 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     `status='rejected'` with `llm_validation_failed: <reasons>` — never silently corrected (template 02
     Notes). Observed working: a plan with `entry == stop` and one with a hallucinated target were both
     rejected with their reasons intact.
+
+## 2026-09-10 — Phase 5
+
+37. **Live trading is refused in code, not by configuration.** `broker.orders.assert_paper_only()` raises
+    if `paper_mode` is false or the base URL is not a paper endpoint, and it guards every submission path
+    including the synthetic stop monitor. Owner's decision: a wrong flag, a stray edit or a bug must not
+    be able to reach real money before Phase 8's paper month. Lifting it is a deliberate one-line change
+    with its own commit, not a setting.
+38. **Order shapes are validated in code against the session, never trusted from the caller** (plan §3.4,
+    §12 rule 2). Pre-market and after-hours accept ONLY limit + TIF day + extended_hours=true; market,
+    stop, stop-limit, bracket and OCO are refused with the reason. This matters because Alpaca *accepts* a
+    pre-market stop and then never triggers it — the dangerous failure is silent acceptance, not rejection.
+39. **`Guardian.evaluate` is the enforcing Layer-1 gate** (plan §11), replacing Phase 4's advisory version
+    (#31). Ten checks: kill switch, account status, order shape, buying power with buffer, spread ceiling,
+    position risk, max concurrent, daily loss limit, wash trade, shortable/ETB. Two rules decide every
+    ambiguous case: **unknown is never green** (a missing quote, an unreachable broker or an empty journal
+    yields yellow with the reason), and **a strategy's risk block may tighten a global default but never
+    loosen it** (`_tighter`), so a config cannot widen the spread ceiling or raise the loss limit.
+    Verified live on the first run: TNON was blocked on a 3.29% spread against its 2% ceiling.
+40. **Deploy is a tap, never automatic.** `auto_approve` exists in settings, ships OFF, and the deploy path
+    does not read it (§12 rule 1). Approval arrives as a Telegram inline button because there is no
+    dashboard until Phase 9. The callback carries only an action and a signal id — the engine re-loads the
+    signal, re-checks the kill switch and re-runs the whole gate before submitting, so a stale or replayed
+    tap cannot skip a check. Only the configured `TELEGRAM_CHAT_ID` is honoured; any other chat gets 403.
+    Re-deploying a signal that is no longer `proposed` returns 409.
+41. **The synthetic stop runs in its own container** (`tradehub-monitor`, same image, different entrypoint).
+    Rebuilding the engine after a code change happens constantly and must never take the stop down while a
+    position is open; a crash here restarts only this. It reloads its watch list every 30 s so an edited
+    stop is picked up without a restart, fires at most once per symbol, and exits with a **bounded limit**
+    priced `MONITOR_SLIP_THROUGH_PCT` through the stop — never a market order, which on a low-float
+    pre-market name is how a stop becomes a 20% slip. A position with no stop on today's plan is logged and
+    left unwatched rather than guessed at, and a failed exit alerts Telegram saying the position is still
+    open and unprotected (§33). It is best-effort by nature: a halt, a gap or a dead socket can all beat it.
+42. **Positions are protected by the broker from 09:31**, not by our process. Workflow 05 attaches a real
+    OCO (take-profit + stop-loss) to every open position with a plan — one minute after the open, because
+    real stops are only accepted in regular hours and firing at 09:30:00 risks landing a second early. It
+    is idempotent (a position already carrying a resting stop or OCO is skipped) and a position with no
+    plan raises a compliance event instead of getting an invented stop.
+43. **No migration was needed.** `orders`, `compliance_events` and `guardian_ledger` all shipped in 0001.
+    Guardian Layer 2 (the fee/spread/tax ledger) stays Phase 6 as planned — Phase 5 writes `orders` and
+    `compliance_events` only.
+44. **End-to-end proof on the paper account (2026-09-10):** an AAPL limit 20% below market passed the gate
+    green, reached Alpaca, wrote its `orders` row with `quote_mid_at_submit` for later spread-cost
+    accounting, was refused on a second deploy (409), and was cancelled cleanly. The kill switch refused a
+    submission before the broker was contacted, and the live lockout refused `paper_mode=false`. The test
+    signal and its order row were deleted afterwards so they cannot pollute Phase 6 analytics.

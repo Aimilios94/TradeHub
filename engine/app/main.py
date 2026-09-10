@@ -4,7 +4,7 @@ Thin-n8n / fat-Python architecture (decision 2026-09-08): n8n only schedules, al
 receives webhooks; every pipeline step is an endpoint here. Phase 0 ships the skeleton:
 health, plugin registry, seed strategies. Phase 1 adds /data/* (app/marketdata/router.py); Phase 2 adds /scan/* (app/scanner/router.py);
 Phase 3 adds /enrich/* (app/sentiment/router.py); Phase 4 adds /signals/* (app/signals/router.py);
-later phases add routers under app/<module>/router.py.
+Phase 5 adds /execute/* (app/execution/router.py); later phases add routers under app/<module>/router.py.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from app import __version__
 from app.config import get_settings
+from app.execution.router import router as execution_router
 from app.marketdata.router import router as data_router
 from app.registry import ALL_PLUGINS, DETECTORS, EXITS
 from app.scanner.router import router as scan_router
@@ -31,6 +32,7 @@ app.include_router(data_router)
 app.include_router(scan_router)
 app.include_router(enrich_router)
 app.include_router(signals_router)
+app.include_router(execution_router)
 
 
 @app.get("/health")
