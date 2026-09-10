@@ -1,0 +1,6 @@
+# Supabase CLI project config (only the parts the hosted project needs; no local stack is run here).
+project_id = "mehjcmbypalshlgwhxme"
+
+[functions.market-proxy]
+# Owner's Supabase session token required (plan §16: frontend gets zero keys, proxy is authenticated).
+verify_jwt = true

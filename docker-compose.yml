@@ -9,6 +9,9 @@ services:
     env_file: .env
     environment:
       TZ: America/New_York
+      OLLAMA_BASE_URL: http://host.docker.internal:11434   # Ollama runs natively on Windows (GPU)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     volumes:

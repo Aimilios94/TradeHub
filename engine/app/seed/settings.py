@@ -42,8 +42,28 @@ APP_SETTINGS: dict[str, dict] = {
         "description": "Cron reference (ET). n8n crons must match these values (plan §4 timeline).",
     },
     "data_feed": {
-        "value": {"live": "iex", "historical": "sip", "calibration_logging": True},
-        "description": "Plan §3.2 / §13: live scanner uses IEX; history is SIP; keep the IEX↔SIP calibration factor logged during the paper month.",
+        "value": {
+            "live": "iex",
+            "historical": "sip",
+            "premarket_volume": "sip",
+            "premarket_checkpoints": ["05:00", "06:00", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30"],
+            "baseline_days": 14,
+            "calibration_logging": True,
+        },
+        "description": (
+            "Plan §3.2 / §13. Quotes/charts = IEX (real-time). Pre-market relative volume = SIP (~15 min delayed on the "
+            "free plan) because IEX pre-market bars are near-empty for small caps (verified 2026-09-10, docs/DECISIONS.md #10). "
+            "Baseline and live cumulative volume ALWAYS use the same feed and the same checkpoint. "
+            "IEX↔SIP calibration is logged nightly for both windows."
+        ),
+    },
+    "baseline_universe": {
+        "value": ["SPY", "QQQ", "IWM", "PLUG", "SOUN", "SNDL", "BNGO", "GNS", "MARA", "RIOT", "NIO", "LCID", "RIVN",
+                  "PLTR", "SOFI", "AMC", "GME", "BBAI", "IONQ", "RGTI", "QUBT", "SMCI", "INTC", "F"],
+        "description": (
+            "Extra symbols the nightly pre-market baseline job maintains besides watchlist_default and every symbol seen in "
+            "scans over the last 30 days (Phase 2 grows this automatically). User-editable."
+        ),
     },
     "watchlist_default": {
         "value": ["TSLA", "NVDA", "AMD", "META", "AAPL", "GOOGL", "MSFT", "AMZN"],

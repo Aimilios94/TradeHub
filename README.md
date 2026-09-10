@@ -12,12 +12,13 @@ Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_i
 
 ## Repository layout
 ```
-engine/            FastAPI service — app/{registry,models,config,db,main}.py, app/seed/, app/{detectors,exits,scanner,guardian,execution,backtest,analytics}/
+engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/{detectors,exits,scanner,guardian,execution,backtest,analytics}/
   scripts/gen_seed.py   generates supabase/migrations/0002_seed.sql (single source of truth = Python + prompt-library)
   tests/                pytest
-supabase/migrations/   0001_core_schema.sql (tables, enums, RLS, views) · 0002_seed.sql (GENERATED)
+supabase/migrations/   0001_core_schema.sql (tables, enums, RLS, views) · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql
+supabase/functions/    market-proxy (Deno Edge Function — the frontend's only market-data door)
 prompt-library/        strategies/ frameworks/ hermes-core/ hermes-extensions/ extension-modules/ tests/ _originals/
-n8n/workflows/         exported workflow JSON (Phase 2+)
+n8n/workflows/         exported workflow JSON (01 nightly baseline, more per phase)
 docker-compose.yml     engine + n8n
 .env.example           every key the project will ever need
 ```
@@ -30,9 +31,10 @@ docker-compose.yml     engine + n8n
    python -m venv .venv
    .\.venv\Scripts\python -m pip install -e ".[dev]"
    .\.venv\Scripts\python -m pytest -q
-   .\.venv\Scripts\python -m uvicorn app.main:app --reload     # http://localhost:8000/health, /plugins, /seed/strategies
+   .\.venv\Scripts\python -m uvicorn app.main:app --reload     # http://localhost:8000/health, /plugins, /seed/strategies, /docs
+   # /data/* needs:  -H "Authorization: Bearer <ENGINE_API_TOKEN>"   e.g. /data/premarket/PLUG, POST /data/premarket-baseline/run?days=20
    ```
-3. **Database:** create a Supabase project → SQL editor → run `supabase/migrations/0001_core_schema.sql` then `0002_seed.sql`. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
+3. **Database:** create a Supabase project → apply `supabase/migrations/` in order (0001 schema, 0002 seed, 0003 pre-market profile). From this PC use the session-pooler `SUPABASE_DB_URL` and `engine\.venv\Scripts\python -c "...psycopg..."` or the SQL editor. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
 4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`. Comments must be on their own lines (the dotenv loader treats a same-line `#` as part of the value). Check readiness any time:
    ```powershell
    cd engine; .\.venv\Scripts\python scripts\check_env.py     # OK / MISSING / FAIL per key, tests each one live, never prints secrets
@@ -50,8 +52,8 @@ cd engine; .\.venv\Scripts\python scripts\gen_seed.py
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | schema, seed, prompt library, engine skeleton | **done 2026-09-08** |
-| 1 | Edge Function market proxy, nightly IEX pre-market baseline, IEX↔SIP calibration log | next — needs Alpaca paper keys + Supabase project |
-| 2 | scanner `/scan/run` + 08:00 / 11:30 ET crons | needs Finviz Elite |
+| 1 | `/data/*` endpoints, nightly same-feed pre-market baseline (IEX + SIP) with checkpoint profile, IEX↔SIP calibration log, Edge Function proxy code, n8n cron 01 | **done 2026-09-10** (Edge Function deploy pending owner token) |
+| 2 | scanner `/scan/run` + 08:00 / 11:30 ET crons | next — FMP screener first, Finviz Elite deferred |
 | 3 | sentiment pipeline → Ollama condenser → `news_sentiment` | needs Reddit app, Finnhub key, Ollama |
 | 4 | Hermes decision node (templates 02/03/04) → `signals` | needs OpenRouter key |
 | 5 | execution: Deploy webhook, Guardian gate, synthetic stop, 09:30 OCO, Telegram, kill switch | needs Telegram bot |
@@ -62,4 +64,4 @@ cd engine; .\.venv\Scripts\python scripts\gen_seed.py
 | E1→E2→E5→FL→E3→E4 | extension modules, after the paper month | |
 
 ## Non-negotiables (from the spec)
-Strategies are data, never code · LLMs never compute · keys never reach the frontend · pre-market = limit only, synthetic stop, no brackets · only `buying_power` (PDT fields are gone) · IEX baseline vs IEX live · paper trading before live · win rate is never the gate · not financial advice; tax provision is a display estimate.
+Strategies are data, never code · LLMs never compute · keys never reach the frontend · pre-market = limit only, synthetic stop, no brackets · only `buying_power` (PDT fields are gone) · same feed on both sides of every relative-volume ratio (SIP baseline vs SIP live — decision #10) · paper trading before live · win rate is never the gate · not financial advice; tax provision is a display estimate.

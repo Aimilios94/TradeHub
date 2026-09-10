@@ -6,7 +6,7 @@ Planned workflows (one file each, added per phase):
 
 | File | Trigger (ET) | Calls | Phase |
 |---|---|---|---|
-| `01_premarket_baseline_nightly.json` | cron 23:00 | `POST /data/premarket-baseline/run` | 1 |
+| `01_premarket_baseline_nightly.json` | cron 23:00 Mon–Fri | `POST /data/premarket-baseline/run?days=1&notify=true` | 1 ✅ |
 | `02_scan_morning.json` | cron 08:00 | `POST /scan/run?kind=morning` → `POST /enrich/run` → `POST /signals/plan` → Telegram | 2–4 |
 | `03_scan_midday.json` | cron 11:30 | `POST /scan/run?kind=midday` | 2 |
 | `04_deploy_webhook.json` | webhook (HMAC + JWT) | `POST /execute/deploy` | 5 |
@@ -18,3 +18,9 @@ Planned workflows (one file each, added per phase):
 | `10_telegram_alerts.json` | webhook from engine | Telegram | 5 |
 
 Import via n8n UI → Workflows → Import from file, or mount `./n8n/workflows` (already in `docker-compose.yml`).
+
+
+## One-time n8n setup
+1. Credentials → New → **Header Auth**: name `TradeHub Engine token`, header `Authorization`, value `Bearer <ENGINE_API_TOKEN from .env>`.
+2. Import each workflow JSON, open the HTTP node, pick that credential, activate the workflow.
+3. Engine URL inside Docker is `http://engine:8000`; from the Windows host it is `http://localhost:8000`.

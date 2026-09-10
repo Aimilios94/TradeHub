@@ -1,0 +1,67 @@
+{
+  "name": "01 Pre-market baseline nightly",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 23 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "23:00 ET Mon-Fri",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "GENERIC_TIMEZONE=America/New_York in docker-compose, so this cron is ET (plan §4 timeline, app_settings.scanner_schedule.premarket_baseline_nightly)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/data/premarket-baseline/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "days", "value": "1" },
+            { "name": "notify", "value": "true" }
+          ]
+        },
+        "options": {
+          "timeout": 600000,
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "POST /data/premarket-baseline/run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Credential 'TradeHub Engine token' = Header Auth, name 'Authorization', value 'Bearer <ENGINE_API_TOKEN from .env>'. Create it once in n8n → Credentials. The engine sends its own Telegram summary (notify=true); n8n holds no logic."
+    }
+  ],
+  "connections": {
+    "23:00 ET Mon-Fri": {
+      "main": [[{ "node": "POST /data/premarket-baseline/run", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": [{ "name": "phase-1" }]
+}
