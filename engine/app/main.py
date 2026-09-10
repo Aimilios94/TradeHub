@@ -2,7 +2,8 @@
 
 Thin-n8n / fat-Python architecture (decision 2026-09-08): n8n only schedules, alerts and
 receives webhooks; every pipeline step is an endpoint here. Phase 0 ships the skeleton:
-health, plugin registry, seed strategies. Phase 1 adds /data/* (app/marketdata/router.py); Phase 2 adds /scan/* (app/scanner/router.py); later phases add routers under app/<module>/router.py.
+health, plugin registry, seed strategies. Phase 1 adds /data/* (app/marketdata/router.py); Phase 2 adds /scan/* (app/scanner/router.py);
+Phase 3 adds /enrich/* (app/sentiment/router.py); later phases add routers under app/<module>/router.py.
 """
 
 from __future__ import annotations
@@ -12,11 +13,12 @@ from fastapi import FastAPI
 from app import __version__
 from app.config import get_settings
 from app.marketdata.router import router as data_router
-from app.scanner.router import router as scan_router
 from app.registry import ALL_PLUGINS, DETECTORS, EXITS
+from app.scanner.router import router as scan_router
 from app.seed import frameworks as seed_frameworks
 from app.seed import settings as seed_settings
 from app.seed import strategies as seed_strategies
+from app.sentiment.router import router as enrich_router
 
 app = FastAPI(
     title="TradeHub engine",
@@ -25,6 +27,7 @@ app = FastAPI(
 )
 app.include_router(data_router)
 app.include_router(scan_router)
+app.include_router(enrich_router)
 
 
 @app.get("/health")

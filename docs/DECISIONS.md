@@ -30,3 +30,49 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
 18. **Which strategies the 08:00 scan covers:** every strategy with a screener universe, plus full_auto watchlist strategies (S2 briefing rows). semi_auto intraday strategies (S4–S8) are Phase 7's live-detector loop, not a screener. Strategies in `backtesting` ARE scanned (no orders can result before Phase 5 + Guardian) so the scanner proves itself before promotion; the cron default is `statuses=backtesting,paper,live`.
 19. **Structure filter levels** (`distance_to_level_atr`) use daily structure only — prior-day H/L/C, 20/60-day extremes, round numbers — never the pre-market high/low (the latest print always sits there).
 20. **`scans.scan_date`** (migration 0004) + unique index (strategy, scan_date, symbol, run_kind): a re-run replaces the day's rows instead of duplicating them.
+
+## 2026-09-10 — Phase 3
+
+21. **Enrichment adds information; it never changes a verdict.** `POST /enrich/run` writes a `catalyst`
+    block into `scans.metrics` and adjusts `metrics.score` / `rank`, but never touches `scans.passed`.
+    A catalyst is evidence for the Hermes decision node (Phase 4), not a screener filter. Owner confirmed
+    2026-09-10.
+22. **There is no `news_catalyst` hard gate to clear.** The Phase 3 plan assumed enrichment would resolve a
+    pending gate of that name; checking the seeded strategies showed none exists. S1 treats the catalyst as
+    a SOFT input ("news catalyst preferred (soft score from `news_sentiment`)", §7) and S3/F-A feeds it into
+    the Hermes one-sentence in-play test (template 04, hosted tier). `metrics.pending_gates` holds
+    unevaluable HARD conditions plus that Hermes slug — every one of them Phase 4's or Phase 7's to satisfy.
+    So the write-back leaves `pending_gates` untouched, and the catalyst's scan-time job is exactly the soft
+    score the plan asked for. The clearing logic was removed rather than left as a no-op.
+23. **The score bonus uses catalyst MAGNITUDE, not direction**: `catalyst_weight * |sentiment_score|`
+    (default 2.0, `app_settings.sentiment`), and only for a catalyst that is both identified
+    (`catalyst_type != "none"`) and `fresh`. "In play" (F-A, the SMB Capital stocks-in-play triple filter,
+    §8) means a real catalyst exists; whether it argues long or short is judgment, and judgment is Hermes'
+    in Phase 4. Re-running enrichment is idempotent — the previous bonus is backed out before the new one
+    is applied, so the score never drifts.
+24. **Phase 3 needed no migration.** `news_sentiment` already shipped in `0001` with
+    `unique (symbol, trade_date, source)`, and `news_source_t` already covered
+    reddit/yahoo/polymarket/finnhub/firecrawl/other. Only `0002_seed.sql` changed (one new `app_settings`
+    row, `sentiment`), and it was applied as that single idempotent statement rather than re-running the
+    whole seed, so no other settings row was overwritten.
+25. **Sources: Finnhub + Yahoo RSS now, Reddit implemented-but-inert.** Yahoo RSS is parsed with stdlib
+    `xml.etree.ElementTree` — no `feedparser` dependency for four fields. Reddit's OAuth fetcher is written
+    and tested; with blank keys it returns `skipped: no credentials`, never a silent "no news" (§33).
+    Adding it later is a `.env` edit plus `"reddit"` in `app_settings.sentiment.sources` — no code change.
+    Polymarket and Firecrawl stay out of Phase 3 (Firecrawl is the plan's explicit last resort, §57).
+26. **LLM contract, enforced in one place** (`app/llm/`): strict JSON in, validated against the template's
+    own `output_schema` (stdlib validator, no `jsonschema` dependency), one retry with the validation error
+    appended to the prompt, then FAIL. A source whose model output never validates is recorded `failed` and
+    writes no `news_sentiment` row — nothing is smoothed over or invented. Prompt text is read from the
+    seeded `prompt_templates` row at run time, falling back to the markdown source when Supabase is
+    unreachable (the fallback is reported in `PromptSpec.origin`, not hidden).
+27. **Ollama host resolution**: `host.docker.internal` also resolves on the Docker Desktop *host*, but
+    points where a localhost-bound Ollama is not listening — so resolvability is not the test. `app/llm/
+    ollama.py` rewrites the alias to `localhost` only when NOT running inside a container (`/.dockerenv`).
+    Verified both paths work: engine container → `host.docker.internal:11434`, host pytest → `localhost`.
+28. **n8n import is CLI-driven and per-file** (`n8n/build_import.py`). `n8n import:workflow` does not
+    de-duplicate tags within a batch, so importing 01–03 together aborts on
+    `UNIQUE constraint failed: tag_entity.name`; one file per command reuses the existing tag. The tracked
+    workflow JSON carries no `id` (that is deployment state), so the generator injects a stable
+    `tradehub-wf-NN` — without it the CLI refuses the import, and with a random one every re-import would
+    duplicate the workflow. Imported workflows arrive inactive by design.

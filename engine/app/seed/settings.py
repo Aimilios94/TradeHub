@@ -69,6 +69,23 @@ APP_SETTINGS: dict[str, dict] = {
         "value": ["TSLA", "NVDA", "AMD", "META", "AAPL", "GOOGL", "MSFT", "AMZN"],
         "description": "Default S2 watchlist and dashboard watchlist (user-editable).",
     },
+    "sentiment": {
+        "value": {
+            "sources": ["finnhub", "yahoo"],
+            "candidates_per_strategy": 5,
+            "lookback_days": 2,
+            "max_items_per_source": 20,
+            "reddit_subs": ["stocks", "wallstreetbets", "pennystocks", "StockMarket"],
+            "catalyst_weight": 2.0,
+        },
+        "description": (
+            "Plan Phase 3 / §10 template 1. Which news sources the catalyst pipeline condenses, and how many "
+            "of each strategy's top-ranked passed candidates it enriches (cap 5, deduped across strategies). "
+            "Add \"reddit\" to `sources` once REDDIT_CLIENT_ID/SECRET are in .env — the fetcher is already "
+            "implemented and reports itself skipped until then. `catalyst_weight` scales the scan-score bonus, "
+            "which uses catalyst MAGNITUDE not direction (docs/DECISIONS.md #23)."
+        ),
+    },
     "failure_policy": {
         "value": {
             "broker_unreachable": "block entries, telegram alert, red banner, synthetic monitor fallback, escalate",
