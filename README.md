@@ -52,7 +52,7 @@ cd engine; .\.venv\Scripts\python scripts\gen_seed.py
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | schema, seed, prompt library, engine skeleton | **done 2026-09-08** |
-| 1 | `/data/*` endpoints, nightly same-feed pre-market baseline (IEX + SIP) with checkpoint profile, IEX↔SIP calibration log, Edge Function proxy code, n8n cron 01 | **done 2026-09-10** (Edge Function deploy pending owner token) |
+| 1 | `/data/*` endpoints, nightly same-feed pre-market baseline (IEX + SIP) with checkpoint profile, IEX↔SIP calibration log, Edge Function proxy code, n8n cron 01 | **done 2026-09-10** (Edge Function deployed) |
 | 2 | scanner `/scan/run` + 08:00 / 11:30 ET crons | next — FMP screener first, Finviz Elite deferred |
 | 3 | sentiment pipeline → Ollama condenser → `news_sentiment` | needs Reddit app, Finnhub key, Ollama |
 | 4 | Hermes decision node (templates 02/03/04) → `signals` | needs OpenRouter key |
