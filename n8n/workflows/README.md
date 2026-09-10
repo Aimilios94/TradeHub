@@ -6,9 +6,9 @@ Planned workflows (one file each, added per phase):
 
 | File | Trigger (ET) | Calls | Phase |
 |---|---|---|---|
-| `01_premarket_baseline_nightly.json` | cron 23:00 Mon–Fri | `POST /data/premarket-baseline/run?days=1&notify=true` | 1 ✅ |
-| `02_scan_morning.json` | cron 08:00 | `POST /scan/run?kind=morning` → `POST /enrich/run` → `POST /signals/plan` → Telegram | 2–4 |
-| `03_scan_midday.json` | cron 11:30 | `POST /scan/run?kind=midday` | 2 |
+| `01_premarket_baseline_nightly.json` | cron 23:00 Mon–Fri | `POST /data/premarket-baseline/run?days=1&notify=true` → `POST /scan/universe/run` | 1–2 ✅ |
+| `02_scan_morning.json` | cron 08:00 Mon–Fri | `POST /scan/run?kind=morning` (→ `POST /enrich/run` → `POST /signals/plan` added in Phases 3–4) | 2 ✅ |
+| `03_scan_midday.json` | cron 11:30 Mon–Fri | `POST /scan/run?kind=midday` | 2 ✅ |
 | `04_deploy_webhook.json` | webhook (HMAC + JWT) | `POST /execute/deploy` | 5 |
 | `05_oco_attach_0930.json` | cron 09:30 | `POST /execute/attach-oco` | 5 |
 | `06_eod_journal.json` | cron 16:30 | `POST /journal/eod` | 6 |

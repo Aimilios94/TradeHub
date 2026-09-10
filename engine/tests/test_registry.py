@@ -31,7 +31,7 @@ def test_plan_constraints_encoded():
     assert "09:30" in get("bracket_oco")["description"]
     assert "< 1s" in get("synthetic_premarket_stop")["description"]
     assert "DISPLAY-ONLY" in get("cvd")["description"]
-    assert get("relative_volume_premarket")["params"]["feed"]["default"] == "iex"
+    assert get("relative_volume_premarket")["params"]["feed"]["default"] == "sip"  # decision #10
 
 
 def test_register_rejects_unknown_names():
@@ -42,7 +42,7 @@ def test_register_rejects_unknown_names():
 
 
 def test_registered_but_unimplemented_raise_not_implemented():
-    assert detectors.implemented() == []
+    assert set(detectors.implemented()) == {"adv", "atr", "distance_to_level_atr", "float_shares", "gap_pct", "nbar_high_low", "premarket_high_low", "prior_day_levels", "relative_volume_premarket"}  # Phase 2 subset
     assert exits.implemented() == []
     with pytest.raises(NotImplementedError):
         detectors.get("ema")

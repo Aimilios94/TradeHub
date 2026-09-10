@@ -39,16 +39,18 @@ S1 = StrategyConfig(
     frameworks=["FA"],
     universe=ScreenerUniverse(
         type="screener",
-        source="finviz_elite",
+        source="alpaca",
         params={"price_min": 2.0, "price_max": 20.0, "gap_pct_min": 10.0, "float_max_shares": 20_000_000},
     ),
     entry_conditions=EntryConditions(
         direction=Direction.long,
         all=[
-            Condition(detector="relative_volume_premarket", params={"baseline_days": 14, "feed": "iex"},
-                      op=">=", value=5.0, label="cumulative pre-market volume ≥ 5× the 14-day IEX average"),
+            Condition(detector="relative_volume_premarket", params={"baseline_days": 14, "feed": "sip"},
+                      op=">=", value=5.0, label="cumulative pre-market volume ≥ 5× the 14-day same-feed (SIP) average at the same checkpoint"),
             Condition(detector="gap_pct", op=">=", value=10.0),
             Condition(detector="float_shares", op="<", value=20_000_000),
+            Condition(detector="premarket_high_low", field="print_count", op=">=", value=10,
+                      label="no polka-dot charts: ≥10 pre-market 1-min prints (F-A participation)"),
         ],
         soft=[
             Condition(detector="premarket_high_low", label="breakout level for the buy-stop entry"),
@@ -89,7 +91,7 @@ S2 = StrategyConfig(
         direction=Direction.both,
         soft=[
             Condition(detector="gap_pct", label="pre-market % change"),
-            Condition(detector="relative_volume_premarket", params={"baseline_days": 14, "feed": "iex"}),
+            Condition(detector="relative_volume_premarket", params={"baseline_days": 14, "feed": "sip"}),
             Condition(detector="prior_day_levels"),
             Condition(detector="premarket_high_low"),
             Condition(detector="volume_profile", params={"scope": "prior_day"}),
@@ -118,7 +120,7 @@ S3 = StrategyConfig(
     frameworks=["FA"],
     universe=ScreenerUniverse(
         type="screener",
-        source="finviz_elite",
+        source="alpaca",
         params={"gap_abs_pct_min": 3.0, "adv_min_shares": 2_000_000, "atr_min_usd": 1.0},
     ),
     entry_conditions=EntryConditions(
@@ -129,6 +131,8 @@ S3 = StrategyConfig(
             Condition(detector="atr", params={"period": 14}, op=">", value=1.0),
             Condition(detector="relative_volume_premarket", field="pct_of_adv", op=">=", value=10.0,
                       label="participation: pre-market volume ≥ 10% of ADV (tiers 20/50/100 escalate score)"),
+            Condition(detector="premarket_high_low", field="print_count", op=">=", value=20,
+                      label="no polka-dot charts: ≥20 pre-market 1-min prints"),
             Condition(detector="distance_to_level_atr", params={"max_atr": 1.5}, op="<=", value=1.5,
                       label="structure: reject mid-range 'no man's land'"),
         ],

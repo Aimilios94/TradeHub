@@ -21,6 +21,7 @@ ET = ZoneInfo("America/New_York")
 FEEDS = ("iex", "sip")
 BAR_LIMIT = 10_000  # Alpaca page size (informational — get_bars never caps totals)
 TIMEFRAMES = ("1Min", "5Min", "15Min", "1Hour", "1Day")
+SIP_DELAY_MINUTES = 16  # free plan: SIP history ends ~15 min ago; keep a 1-min margin
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +89,13 @@ def get_bars(symbols: list[str], start: dt.datetime, end: dt.datetime, *, feed: 
 
     if not symbols:
         return []
+    if feed == "sip":
+        # Free plan: SIP refuses the most recent 15 minutes ("subscription does not permit querying recent SIP data").
+        # Clamp instead of failing — callers already treat the latest bar as the effective window (decision #10).
+        latest_allowed = dt.datetime.now(ET) - dt.timedelta(minutes=SIP_DELAY_MINUTES)
+        end = min(end, latest_allowed)
+        if end <= start:
+            return []
     # limit=None → the SDK follows next_page_token until every bar is returned. Passing a `limit` caps the
     # TOTAL rows (not the page size) and silently drops later symbols in multi-symbol requests.
     req = StockBarsRequest(symbol_or_symbols=list(symbols), timeframe=_timeframe(timeframe), start=start, end=end,

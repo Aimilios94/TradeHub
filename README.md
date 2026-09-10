@@ -12,10 +12,10 @@ Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_i
 
 ## Repository layout
 ```
-engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/{detectors,exits,scanner,guardian,execution,backtest,analytics}/
+engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/{exits,guardian,execution,backtest,analytics}/
   scripts/gen_seed.py   generates supabase/migrations/0002_seed.sql (single source of truth = Python + prompt-library)
   tests/                pytest
-supabase/migrations/   0001_core_schema.sql (tables, enums, RLS, views) · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql
+supabase/migrations/   0001_core_schema.sql · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql · 0004_symbol_stats.sql
 supabase/functions/    market-proxy (Deno Edge Function — the frontend's only market-data door)
 prompt-library/        strategies/ frameworks/ hermes-core/ hermes-extensions/ extension-modules/ tests/ _originals/
 n8n/workflows/         exported workflow JSON (01 nightly baseline, more per phase)
@@ -32,7 +32,8 @@ docker-compose.yml     engine + n8n
    .\.venv\Scripts\python -m pip install -e ".[dev]"
    .\.venv\Scripts\python -m pytest -q
    .\.venv\Scripts\python -m uvicorn app.main:app --reload     # http://localhost:8000/health, /plugins, /seed/strategies, /docs
-   # /data/* needs:  -H "Authorization: Bearer <ENGINE_API_TOKEN>"   e.g. /data/premarket/PLUG, POST /data/premarket-baseline/run?days=20
+   # /data/* and /scan/* need:  -H "Authorization: Bearer <ENGINE_API_TOKEN>"
+   #   e.g. GET /data/premarket/PLUG · POST /scan/run?kind=morning&dry_run=true · GET /scan/latest · GET /scan/universe/PLUG
    ```
 3. **Database:** create a Supabase project → apply `supabase/migrations/` in order (0001 schema, 0002 seed, 0003 pre-market profile). From this PC use the session-pooler `SUPABASE_DB_URL` and `engine\.venv\Scripts\python -c "...psycopg..."` or the SQL editor. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
 4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`. Comments must be on their own lines (the dotenv loader treats a same-line `#` as part of the value). Check readiness any time:
@@ -53,8 +54,8 @@ cd engine; .\.venv\Scripts\python scripts\gen_seed.py
 |---|---|---|
 | 0 | schema, seed, prompt library, engine skeleton | **done 2026-09-08** |
 | 1 | `/data/*` endpoints, nightly same-feed pre-market baseline (IEX + SIP) with checkpoint profile, IEX↔SIP calibration log, Edge Function proxy code, n8n cron 01 | **done 2026-09-10** (Edge Function deployed) |
-| 2 | scanner `/scan/run` + 08:00 / 11:30 ET crons | next — FMP screener first, Finviz Elite deferred |
-| 3 | sentiment pipeline → Ollama condenser → `news_sentiment` | needs Reddit app, Finnhub key, Ollama |
+| 2 | `/scan/run` morning + midday, nightly `symbol_stats` universe (Alpaca), 9 detectors, n8n crons 02/03 | **done 2026-09-10** (Finviz Elite deferred; float = FMP shares outstanding, approximate) |
+| 3 | sentiment pipeline → Ollama condenser → `news_sentiment` | next (Reddit keys still pending; Finnhub + Ollama ready) |
 | 4 | Hermes decision node (templates 02/03/04) → `signals` | needs OpenRouter key |
 | 5 | execution: Deploy webhook, Guardian gate, synthetic stop, 09:30 OCO, Telegram, kill switch | needs Telegram bot |
 | 6 / 6.5 | journal, ledger, analytics, weekly autopsy → hypotheses, Guardian briefing | |

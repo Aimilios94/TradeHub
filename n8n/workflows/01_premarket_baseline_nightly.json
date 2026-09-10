@@ -1,5 +1,5 @@
 {
-  "name": "01 Pre-market baseline nightly",
+  "name": "01 Nightly: pre-market baseline + universe stats",
   "nodes": [
     {
       "parameters": {
@@ -16,7 +16,10 @@
       "name": "23:00 ET Mon-Fri",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "notes": "GENERIC_TIMEZONE=America/New_York in docker-compose, so this cron is ET (plan §4 timeline, app_settings.scanner_schedule.premarket_baseline_nightly)."
     },
     {
@@ -28,20 +31,33 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "days", "value": "1" },
-            { "name": "notify", "value": "true" }
+            {
+              "name": "days",
+              "value": "1"
+            },
+            {
+              "name": "notify",
+              "value": "true"
+            }
           ]
         },
         "options": {
           "timeout": 600000,
-          "response": { "response": { "responseFormat": "json" } }
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
         }
       },
       "id": "a1b2c3d4-0001-4000-8000-000000000002",
       "name": "POST /data/premarket-baseline/run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [260, 0],
+      "position": [
+        260,
+        0
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
@@ -49,11 +65,70 @@
         }
       },
       "notes": "Credential 'TradeHub Engine token' = Header Auth, name 'Authorization', value 'Bearer <ENGINE_API_TOKEN from .env>'. Create it once in n8n → Credentials. The engine sends its own Telegram summary (notify=true); n8n holds no logic."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/scan/universe/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "lookback_days",
+              "value": "90"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 900000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "POST /scan/universe/run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Phase 2: refresh symbol_stats (prev close, ADV, ATR, 20/60-day levels) for every tradable listed US equity from Alpaca SIP daily bars. ~3 min."
     }
   ],
   "connections": {
     "23:00 ET Mon-Fri": {
-      "main": [[{ "node": "POST /data/premarket-baseline/run", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "POST /data/premarket-baseline/run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /data/premarket-baseline/run": {
+      "main": [
+        [
+          {
+            "node": "POST /scan/universe/run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -62,6 +137,12 @@
     "errorWorkflow": ""
   },
   "active": false,
-  "meta": { "templateCredsSetupCompleted": false },
-  "tags": [{ "name": "phase-1" }]
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-1"
+    }
+  ]
 }

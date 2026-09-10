@@ -45,8 +45,26 @@ def fetch_setting(key: str, default=None):
 
 
 def baseline_universe(scan_days: int = 30) -> list[str]:
-    """Symbols the nightly job maintains: default watchlist ∪ `baseline_universe` setting ∪ recent scan symbols."""
+    """Symbols the nightly job maintains.
+
+    Phase 2: every symbol in `symbol_stats` (the whole tradable listed universe, ~13k) so the 08:00 scan always has a
+    same-feed baseline for any gapper. Falls back to watchlist ∪ `baseline_universe` setting ∪ recent scan symbols
+    when the universe table is empty (first run).
+    """
     syms: set[str] = set()
+    try:
+        off, page = 0, 1000
+        while True:
+            rows = (get_client().table("symbol_stats").select("symbol").eq("tradable", True)
+                    .range(off, off + page - 1).execute().data or [])
+            syms.update(r["symbol"] for r in rows)
+            if len(rows) < page:
+                break
+            off += page
+    except Exception as e:  # noqa: BLE001
+        log.warning("symbol_stats lookup failed (%s); falling back to watchlist universe", type(e).__name__)
+    if len(syms) > 100:
+        return sorted(syms)
     for key in ("watchlist_default", "baseline_universe"):
         v = fetch_setting(key, [])
         if isinstance(v, list):

@@ -51,7 +51,7 @@ class Direction(StrEnum):
 
 class ScreenerUniverse(BaseModel):
     type: Literal["screener"]
-    source: Literal["finviz_elite", "fmp"] = "finviz_elite"
+    source: Literal["alpaca", "finviz_elite", "fmp"] = "alpaca"  # alpaca = free assets + SIP daily stats (decision #16)
     params: dict[str, Any]
 
 

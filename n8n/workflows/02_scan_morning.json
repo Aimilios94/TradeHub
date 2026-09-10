@@ -1,0 +1,46 @@
+{
+  "name": "02 Scan morning 08:00 ET",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * 1-5" }] }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000001",
+      "name": "08:00 ET Mon-Fri",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "app_settings.scanner_schedule.morning_scan. SIP pre-market bars are ~15 min delayed, so the scan sees volume through ≈07:45 ET (decision #10)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/scan/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "kind", "value": "morning" },
+            { "name": "notify", "value": "true" }
+          ]
+        },
+        "options": { "timeout": 600000, "response": { "response": { "responseFormat": "json" } } }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "POST /scan/run?kind=morning",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "TradeHub Engine token" } },
+      "notes": "Every scannable strategy's screener params + entry conditions from strategy_configs → scans. Phase 3 (enrich) and Phase 4 (Hermes plans) chain after this node. Engine sends the Telegram summary."
+    }
+  ],
+  "connections": {
+    "08:00 ET Mon-Fri": { "main": [[{ "node": "POST /scan/run?kind=morning", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "America/New_York", "errorWorkflow": "" },
+  "active": false,
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": [{ "name": "phase-2" }]
+}

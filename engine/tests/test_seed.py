@@ -25,7 +25,7 @@ from app.seed.strategies import all_strategies
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ENGINE_ROOT.parent
 sys.path.insert(0, str(ENGINE_ROOT / "scripts"))
-import gen_seed  # noqa: E402
+import gen_seed
 
 
 def test_eight_strategies_validate():
@@ -62,7 +62,7 @@ def test_s1_premarket_rules():
     oco = [e for e in s1.exit_logic if e.plugin == "bracket_oco"]
     assert oco and oco[0].when == "regular"
     relvol = [c for c in s1.entry_conditions.all if c.detector == "relative_volume_premarket"][0]
-    assert relvol.value == 5.0 and relvol.params["feed"] == "iex" and relvol.params["baseline_days"] == 14
+    assert relvol.value == 5.0 and relvol.params["feed"] == "sip" and relvol.params["baseline_days"] == 14  # decision #10
 
 
 def test_s5_uses_pdf_threshold_85_not_interview_80():

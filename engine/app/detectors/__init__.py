@@ -1,4 +1,4 @@
-"""Detectors / indicators (plan §9, §27) — implemented in Phase 7, referenced from Phase 2.
+"""Detectors / indicators (plan §9, §27) — Phase 2 implements the price/volume/level subset (basic.py); Phase 7 the rest.
 
 Contract: every detector is a pure function `run(bars: pd.DataFrame, **params) -> DetectorResult`
 where `bars` is an OHLCV frame indexed by ET timestamp for one symbol (plus context frames
@@ -8,8 +8,9 @@ detectors compute. Names must match app/registry.py.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import pandas as pd
 
@@ -51,3 +52,7 @@ def get(name: str) -> DetectorFn:
         return _DETECTORS[name]
     except KeyError as e:
         raise NotImplementedError(f"detector '{name}' is registered but not implemented yet (Phase 7)") from e
+
+
+# Phase 2 implementations register themselves on import (kept at the bottom to avoid a circular import).
+from app.detectors import basic  # noqa: F401
