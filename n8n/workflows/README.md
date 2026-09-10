@@ -7,7 +7,7 @@ Planned workflows (one file each, added per phase):
 | File | Trigger (ET) | Calls | Phase |
 |---|---|---|---|
 | `01_premarket_baseline_nightly.json` | cron 23:00 Mon–Fri | `POST /data/premarket-baseline/run?days=1&notify=true` → `POST /scan/universe/run` | 1–2 ✅ |
-| `02_scan_morning.json` | cron 08:00 Mon–Fri | `POST /scan/run?kind=morning` → `POST /enrich/run` (→ `POST /signals/plan` added in Phase 4) | 2–3 ✅ |
+| `02_scan_morning.json` | cron 08:00 Mon–Fri | `POST /scan/run?kind=morning` → `POST /enrich/run` → `POST /signals/plan` | 2–4 ✅ |
 | `03_scan_midday.json` | cron 11:30 Mon–Fri | `POST /scan/run?kind=midday` | 2 ✅ |
 | `04_deploy_webhook.json` | webhook (HMAC + JWT) | `POST /execute/deploy` | 5 |
 | `05_oco_attach_0930.json` | cron 09:30 | `POST /execute/attach-oco` | 5 |
@@ -40,8 +40,10 @@ Three things that will bite otherwise, all verified 2026-09-10:
    reuses the existing tag and works.
 2. **Git Bash rewrites container paths** — `/home/node/...` becomes `C:/Program Files/Git/home/node/...`
    and the import fails with ENOENT. Prefix with `MSYS_NO_PATHCONV=1`.
-3. **Imported workflows arrive INACTIVE**, and re-importing an active workflow deactivates it. Activation
-   is a deliberate UI step at http://localhost:5678 — the CLI will not arm live crons for you.
+3. **Imported workflows arrive INACTIVE**, and re-importing an active workflow deactivates it (the CLI
+   prints "Deactivating workflow ..."). Re-arm it without the UI with
+   `docker exec tradehub-n8n n8n update:workflow --id=tradehub-wf-02 --active=true`, then
+   `docker restart tradehub-n8n` — the update only takes effect on restart, which the CLI warns about.
 
 The credential is written decrypted; `n8n import:credentials` encrypts it with the instance key on the way
 in. To confirm it decrypted to the right token without printing it, compare hashes:

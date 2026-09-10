@@ -105,6 +105,46 @@
         }
       },
       "notes": "Phase 3: top 5 passed candidates per strategy (app_settings.sentiment) -> Finnhub + Yahoo RSS -> local hermes3:8b condenser -> news_sentiment, and a catalyst block onto today's scans rows. Never flips scans.passed and never clears a gate (decisions 21, 22). Engine sends its own Telegram summary. ~60-90 s for a full morning; timeout 15 min."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/signals/plan",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 900000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000004",
+      "name": "POST /signals/plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Phase 4: template 04 in-play gate -> template 02 trade plans -> `signals`, plus the S2 watchlist briefing (template 03) -> `briefings`. Hosted Hermes 70B via OpenRouter, ~1c a morning. Plans are PROPOSALS: every price is re-validated in code and a failing plan is stored rejected with its reason. Nothing is executed here — approval is Phase 5."
     }
   ],
   "connections": {
@@ -129,6 +169,17 @@
           }
         ]
       ]
+    },
+    "POST /enrich/run": {
+      "main": [
+        [
+          {
+            "node": "POST /signals/plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -146,6 +197,9 @@
     },
     {
       "name": "phase-3"
+    },
+    {
+      "name": "phase-4"
     }
   ]
 }

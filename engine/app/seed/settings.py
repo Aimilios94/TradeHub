@@ -86,6 +86,21 @@ APP_SETTINGS: dict[str, dict] = {
             "which uses catalyst MAGNITUDE not direction (docs/DECISIONS.md #23)."
         ),
     },
+    "signals": {
+        "value": {
+            "candidates_per_strategy": 5,
+            "run_in_play_gate": True,
+            "briefing_strategy": "S2",
+            "level_tolerance_pct": 3.0,
+        },
+        "description": (
+            "Plan Phase 4 / §10 templates 2-4. How many of each strategy's top-ranked passed candidates get a "
+            "Hermes trade plan, whether the cheap one-sentence in-play gate (template 04) runs first, which "
+            "strategy produces the watchlist briefing (template 03), and how far a planned price may sit from a "
+            "supplied level before code rejects the plan (template 02 Notes: ±3%). Signals are proposals; "
+            "execution is Phase 5."
+        ),
+    },
     "failure_policy": {
         "value": {
             "broker_unreachable": "block entries, telegram alert, red banner, synthetic monitor fallback, escalate",

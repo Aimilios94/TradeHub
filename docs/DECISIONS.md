@@ -76,3 +76,50 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     workflow JSON carries no `id` (that is deployment state), so the generator injects a stable
     `tradehub-wf-NN` — without it the CLI refuses the import, and with a random one every re-import would
     duplicate the workflow. Imported workflows arrive inactive by design.
+
+## 2026-09-10 — Phase 4
+
+29. **The in-play gate records its verdict; it does not flip `scans.passed`.** Template 04's own Notes
+    prescribe writing `scans.reject_reason`, but the owner chose the softer record (2026-09-10): the
+    verdict, sentence, strength and reason go to `scans.metrics.in_play` with `decided_by`, and `passed`
+    keeps meaning "the code-based filters passed". Where code and Hermes disagree therefore stays visible,
+    which is the record needed to judge whether the gate can be trusted. Only gate survivors get a plan.
+30. **A briefing is not a signal.** Template 03's output has no entry, stop, target or size and nothing can
+    be executed from it, so it lives in its own `briefings` table (migration 0005) rather than in `signals`
+    under a new status. Keeps `signals` meaning exactly one thing — a proposed trade — so a "signals today"
+    count is never inflated by briefings. Owner's call.
+31. **Phase 4 ships an ADVISORY pre-check, not the Guardian gate.** `context.advisory_precheck` computes the
+    cheap read-only slice already available — kill switch, open positions vs `max_concurrent`, live spread
+    vs the ceiling, easy-to-borrow for shorts — labels itself `advisory: true`, and cannot block anything.
+    It exists so template 02 sees real numbers instead of blanks. Anything it cannot know (the daily loss
+    limit, which needs closed trades) reports `unknown`, never `green`. Phase 5 replaces it with the
+    enforcing Guardian.
+32. **Every prompt is shown its own output schema.** Answers are validated against the template's
+    `output_schema`, but that schema was never sent to the model — so it invented a reasonable-looking shape
+    and every hosted answer failed validation (template 04 returned `{"CULP": {...}}`; template 03 omitted
+    `rows`). Template 01 had survived only because its system prompt enumerates every field in prose.
+    `llm.schema_contract` now appends the schema plus the omission rule to every prompt. Related: an
+    OPTIONAL key sent as `null` is treated as omitted by the validator — models express an inapplicable
+    field that way (a 'skip' plan has no size), and rejecting it failed otherwise-correct answers.
+33. **Code pre-computes the stop/size pairing; Hermes only chooses a row.** Template 02 forbids Hermes
+    calculating anything, yet the stop it picks determines the correct size — so with only a 1-ATR estimate
+    on offer it either invented a stop distance (TNON: `entry - 0.5 x ATR`, landing 3.17% from the nearest
+    real level) or sized against the stale cap (CULP: 3607 shares risking $1,407 of a $500 budget). Each
+    candidate now carries `stop_options`: every valid stop level paired with the shares that stop allows.
+    Two related fixes: `atr_extensions` supply measured-move targets (a target is by nature beyond current
+    structure, so without them every target failed the ±3% level check), and `round_numbers` uses a finer
+    grid below $10 — at $3.70 a 0.50 step returned NO level within ±5%, silently stripping half the
+    candidate's usable structure.
+34. **Size is validated against the stop actually chosen, not the estimate.** A tighter stop legitimately
+    allows more shares, so capping against the 1-ATR pre-estimate would reject correct plans; capping only
+    by it would pass over-risked ones. The check is `size x |entry - stop| <= risk_dollars` (5% rounding
+    tolerance), and the message names the maximum shares that stop permits.
+35. **Model choice stays with the template.** Templates 02-04 declare Hermes 3 70B. A 405B comparison on the
+    same candidate produced a valid answer too (it chose `skip` where the 70B wrote a plan) — judgment,
+    not correctness, so the declared model stands and `OPENROUTER_MODEL_HIGH_STAKES` remains free for later
+    phases. A full morning costs about one cent; the whole of Phase 4's development consumed $0.06.
+36. **Nothing in Phase 4 can execute.** `app/broker/` is read-only by construction (account snapshot and
+    positions only) and every `signals` row is a proposal. A plan that fails code re-validation is stored
+    `status='rejected'` with `llm_validation_failed: <reasons>` — never silently corrected (template 02
+    Notes). Observed working: a plan with `entry == stop` and one with a hallucinated target were both
+    rejected with their reasons intact.

@@ -69,11 +69,18 @@ def _check(value, schema: dict, path: str) -> ValidationFailure | None:
             extra = sorted(set(value) - set(props))
             if extra:
                 return ValidationFailure(path or "$", f"unexpected key(s) {extra}")
+        required = set(schema.get("required", []))
         for key, sub in props.items():
-            if key in value and isinstance(sub, dict):
-                bad = _check(value[key], sub, f"{path}.{key}" if path else key)
-                if bad:
-                    return bad
+            if key not in value or not isinstance(sub, dict):
+                continue
+            # An OPTIONAL key sent as null means "does not apply" — treat it as omitted rather than as a
+            # type error. Models express an inapplicable field that way (a 'skip' plan has no size), and
+            # rejecting it would fail an otherwise correct answer. Required keys still may not be null.
+            if value[key] is None and key not in required and sub.get("type") != "null":
+                continue
+            bad = _check(value[key], sub, f"{path}.{key}" if path else key)
+            if bad:
+                return bad
     return None
 
 
