@@ -1,0 +1,94 @@
+{
+  "name": "09 Rules freshness monthly",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000001",
+      "name": "1st of the month 10:00 ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "app_settings.scanner_schedule.rules_freshness_monthly."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/guardian/rules-check",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000002",
+      "name": "POST /guardian/rules-check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Hashes the six broker-rule source pages listed in docs/BROKER_RULES.md and raises a compliance_events row when one moves. The PDT retirement is the worked example: a rule that quietly disappears is as dangerous as one that quietly appears. The job FLAGS; a human reads the page and decides. After applying a change, re-run with rebaseline=true to accept the new hash."
+    }
+  ],
+  "connections": {
+    "1st of the month 10:00 ET": {
+      "main": [
+        [
+          {
+            "node": "POST /guardian/rules-check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-6"
+    }
+  ]
+}

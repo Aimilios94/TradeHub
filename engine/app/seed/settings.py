@@ -114,6 +114,21 @@ APP_SETTINGS: dict[str, dict] = {
             "(docs/DECISIONS.md #46). The SEC rate is reset annually; update it here, not in code."
         ),
     },
+    "rules_file": {
+        "value": {
+            "version": 1,
+            "last_checked": None,
+            "hashes": {},
+            "flagged_changes": [],
+            "doc": "docs/BROKER_RULES.md",
+        },
+        "description": (
+            "Guardian rules-knowledge state (plan §10, §11). `docs/BROKER_RULES.md` states the six broker "
+            "rules the engine relies on; the monthly freshness job hashes each source page and raises a "
+            "`compliance_events` row when one moves. A changed page means someone should READ it — the job "
+            "never decides a rule changed and never edits the doc (docs/DECISIONS.md #55)."
+        ),
+    },
     "failure_policy": {
         "value": {
             "broker_unreachable": "block entries, telegram alert, red banner, synthetic monitor fallback, escalate",

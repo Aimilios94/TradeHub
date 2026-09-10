@@ -57,7 +57,7 @@ Orders can now reach the broker — but only your paper account, and only when y
 Three things it refuses to do: place a live-money order, place anything while the kill switch is on,
 or place a pre-market order type the broker would silently ignore.
 
-## ✅ Phase 6 — Journal & analytics  ← you are here, just finished
+## ✅ Phase 6 — Journal & analytics
 The system starts learning from you.
 
 - **Every finished trade is recorded automatically at 16:30** — what you actually paid, what you actually
@@ -73,10 +73,17 @@ The system starts learning from you.
 Suggestions are never applied on their own. Anything that would loosen a risk limit is thrown out
 automatically, and the rest waits for a backtest (Phase 7) and your approval.
 
-## ⬜ Phase 6.5 — Guardian briefing *(next)*
-A plain-English "here's your risk right now" summary on demand.
+## ✅ Phase 6.5 — Guardian briefing  ← you are here, just finished
+- **Ask it anything, from your phone** — send `/guardian` to the bot (optionally with a question like
+  "am I taking too much risk?") and it replies in plain English: where your account stands, what changed,
+  active warnings, this month's costs, the tax provision, and up to three concrete suggestions.
+  It is a **monitor, not an advisor** — it never gives tax or investment advice, and the tax line always
+  says to confirm with an accountant.
+- **Monthly rules check** — the system depends on six broker rules (like "pre-market only accepts limit
+  orders"). On the 1st of each month it checks whether the broker's own pages changed and tells you which
+  rule to re-read. It flags; you decide. It found two dead links the first time it ran.
 
-## ⬜ Phase 7 — Backtest engine
+## ⬜ Phase 7 — Backtest engine *(next)*
 Replay a strategy over past data with realistic fills and fees, so you know if it works *before*
 risking money. Also adds the remaining chart indicators (VWAP, EMAs, volume profile).
 

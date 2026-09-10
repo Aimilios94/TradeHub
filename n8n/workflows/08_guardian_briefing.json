@@ -1,0 +1,143 @@
+{
+  "name": "08 Guardian briefing on demand",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000001",
+      "name": "Telegram message",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "TradeHub Telegram bot"
+        }
+      },
+      "notes": "Send /guardian (optionally followed by a question) to @TradehubNews_bot."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/guardian",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000002",
+      "name": "Is it /guardian?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        260,
+        0
+      ],
+      "notes": "Every other message is ignored. The engine independently refuses any chat that is not the configured owner."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/guardian/briefing",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "={{ $('Telegram message').item.json.message.text.replace('/guardian','').trim() }}"
+            },
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 900000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000003",
+      "name": "POST /guardian/briefing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Guardian Layer 3: equity, buying power, open positions, ledger totals, tax provision, recent compliance events and rules freshness -> plain language, sent straight back to Telegram. A MONITOR, not an advisor: it restates code-computed figures, never invents one, and the tax line always carries its 'confirm with an accountant' disclaimer."
+    }
+  ],
+  "connections": {
+    "Telegram message": {
+      "main": [
+        [
+          {
+            "node": "Is it /guardian?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is it /guardian?": {
+      "main": [
+        [
+          {
+            "node": "POST /guardian/briefing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-6"
+    }
+  ]
+}

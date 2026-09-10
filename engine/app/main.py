@@ -5,7 +5,8 @@ receives webhooks; every pipeline step is an endpoint here. Phase 0 ships the sk
 health, plugin registry, seed strategies. Phase 1 adds /data/* (app/marketdata/router.py); Phase 2 adds /scan/* (app/scanner/router.py);
 Phase 3 adds /enrich/* (app/sentiment/router.py); Phase 4 adds /signals/* (app/signals/router.py);
 Phase 5 adds /execute/* (app/execution/router.py);
-Phase 6 adds /journal/*, /analytics/* and /review/* (app/journal/router.py); later phases add routers under app/<module>/router.py.
+Phase 6 adds /journal/*, /analytics/* and /review/* (app/journal/router.py);
+Phase 6.5 adds /guardian/* (app/guardian/router.py); later phases add routers under app/<module>/router.py.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from fastapi import FastAPI
 from app import __version__
 from app.config import get_settings
 from app.execution.router import router as execution_router
+from app.guardian.router import router as guardian_router
 from app.journal.router import router as journal_router
 from app.marketdata.router import router as data_router
 from app.registry import ALL_PLUGINS, DETECTORS, EXITS
@@ -36,6 +38,7 @@ app.include_router(enrich_router)
 app.include_router(signals_router)
 app.include_router(execution_router)
 app.include_router(journal_router)
+app.include_router(guardian_router)
 
 
 @app.get("/health")

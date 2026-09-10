@@ -12,7 +12,7 @@ Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_i
 
 ## Repository layout
 ```
-engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/{exits,backtest}/
+engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/guardian/{briefing,rules}.py (Phase 6.5), app/{exits,backtest}/
   scripts/gen_seed.py   generates supabase/migrations/0002_seed.sql (single source of truth = Python + prompt-library)
   tests/                pytest
 supabase/migrations/   0001_core_schema.sql · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql · 0004_symbol_stats.sql
@@ -40,6 +40,7 @@ docker-compose.yml     engine + n8n
    #        GET /execute/status · POST /execute/gate/preview?signal_id=… · POST /execute/deploy?signal_id=…
    #        POST /execute/kill-switch?engage=true · GET /execute/orders · GET /execute/compliance
    #        POST /journal/eod · GET /analytics/report · GET /analytics/ledger · POST /review/weekly
+   #        POST /guardian/briefing · GET /guardian/state · POST /guardian/rules-check · GET /guardian/rules
    ```
 3. **Database:** create a Supabase project → apply `supabase/migrations/` in order (0001 schema, 0002 seed, 0003 pre-market profile, 0004 symbol_stats, 0005 briefings). From this PC use the session-pooler `SUPABASE_DB_URL` and `engine\.venv\Scripts\python -c "...psycopg..."` or the SQL editor. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
 4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`. Comments must be on their own lines (the dotenv loader treats a same-line `#` as part of the value). Check readiness any time:
@@ -49,6 +50,12 @@ docker-compose.yml     engine + n8n
 5. **Stack:** `docker compose up -d` — engine on :8000, n8n on :5678, and `monitor` (the synthetic
    pre-market stop, no port) — all in `America/New_York`. The monitor is a separate container on
    purpose: rebuilding the engine must never take the stop down while a position is open.
+
+## Broker rules
+`docs/BROKER_RULES.md` lists the six broker rules the engine depends on and where each came
+from. The monthly job (`POST /guardian/rules-check`, n8n cron 09) hashes those source pages and raises a
+`compliance_events` row when one moves. It flags; you read the page and decide. After applying a change,
+re-run with `rebaseline=true`.
 
 ## Regenerating the seed
 Edit `engine/app/registry.py`, `engine/app/seed/*.py`, or `prompt-library/hermes-core/*.md`, then:
@@ -72,7 +79,7 @@ three gotchas (batch tag collision, Git Bash path mangling, imports arrive inact
 | 4 | `/signals/plan`: in-play gate (template 04) → trade plans (02) → `signals`, watchlist briefing (03) → `briefings`; every planned price re-validated in code | **done 2026-09-10** (proposals only — nothing executes) |
 | 5 | `/execute/*`: Telegram Deploy tap → enforcing Guardian Layer-1 gate → limit order → `orders`; synthetic pre-market stop in its own container; 09:31 OCO attach; kill switch | **done 2026-09-10** (paper only — live is refused in code until Phase 8) |
 | 6 | `/journal/eod` (FIFO round trips + Guardian Layer-2 ledger), `/analytics/report` (§14), `/review/weekly` (templates 05+06 → `hypotheses`), degradation trigger; n8n crons 06/07 | **done 2026-09-10** (proposals only — nothing is auto-applied) |
-| 6.5 | Guardian briefing (Layer 3) + monthly rules-freshness job | |
+| 6.5 | `/guardian/briefing` (Layer 3, plain-language state report, reachable as `/guardian` in Telegram) + `/guardian/rules-check` (monthly source-page freshness → `compliance_events`); `docs/BROKER_RULES.md`; n8n crons 08/09 | **done 2026-09-10** |
 | 7 | backtest engine + S1–S8 baselines + S6 vs S7 | |
 | 8 | hardening, onboarding, failure policy, tunnel, then ≥ 4-week paper month | |
 | 9 | UI (React + Tailwind against the mockup) | |

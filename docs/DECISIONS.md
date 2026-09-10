@@ -213,3 +213,31 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     (net −0.1692 = −0.16 gross less 0.0092 estimated fees), three ledger rows, a correct 13:30-14:30 time
     block, a null R (no plan), an honest autopsy that marked both playbook rules "unknown" rather than
     guessing, and an idempotent second EOD run that wrote 0 and skipped 1.
+
+## 2026-09-10 — Phase 6.5
+
+54. **The rules-knowledge file is `docs/BROKER_RULES.md`**, and it exists because six broker rules are
+    load-bearing in this engine: extended-hours order types, no brackets pre-market, PDT retired, the free
+    plan's SIP delay, sell-side fees, and the shorting requirements. Each entry states the rule, why the
+    code depends on it, and its source page. A rule nobody wrote down is a flag nobody can act on — a test
+    asserts every watched rule has a section in the doc.
+55. **Freshness detection is deterministic; interpretation is human.** The monthly job fetches each source
+    page, strips markup and per-request noise, hashes it, and compares against `app_settings.rules_file`.
+    A changed hash raises a `compliance_events` row naming the rule that depends on that page. The job
+    **never decides a rule changed and never edits the doc** — its own Telegram summary says so. `rebaseline`
+    accepts the new page after a human has read it. An unreachable page is reported, never treated as
+    unchanged.
+56. **Two of the spec-era URLs were already dead** (`/docs/fees` and `/docs/margin-and-shorting` both 404 on
+    2026-09-10) — which is the freshness problem demonstrating itself before the job had run once. Replaced
+    with reachable pages and re-baselined. R1 and R2 deliberately share a source page, so both are flagged
+    when it moves; that is correct, and the test fixture had to be taught it.
+57. **The tax disclaimer is enforced in code, not requested in the prompt.** If the briefing comes back
+    without "confirm with an accountant" in its tax line, `run_briefing` appends it. The boundary — monitor,
+    not advisor — is repeated in the response payload itself.
+58. **A failed briefing still returns the figures.** If the model call fails the endpoint returns the
+    gathered, code-computed inputs with an explicit error and the note that the numbers are unaffected,
+    plus a Telegram alert pointing at `/analytics/ledger`. Losing the narration must not look like losing
+    the data.
+59. **The briefing is reachable from Telegram** (`/guardian` + an optional question, workflow 08) since
+    there is no dashboard until Phase 9. Non-`/guardian` messages are ignored by the workflow, and the
+    engine independently refuses any chat that is not the configured owner.
