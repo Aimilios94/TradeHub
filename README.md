@@ -100,23 +100,30 @@ three gotchas (batch tag collision, Git Bash path mangling, imports arrive inact
 
 | | trades | win rate | expectancy | verdict |
 |---|---|---|---|---|
+| S1 Low-Float Gapper | 42 | 42.9% | **+21.78** | inconclusive (under 100 trades; edge in one half only) |
+| S3 SMB Stocks-in-Play | 156 | — | −10.29 | **fail** |
 | S4 HPS Quad Divergence | 150 | 34.0% | −53.05 | **fail** |
 | S5 20/20 Bull Flag | 45 | 8.9% | −96.99 | inconclusive (under 100 trades) |
 | S6 Bear Flag (PDF canonical) | 54 | 11.1% | −79.06 | inconclusive (under 100 trades) |
 | S7 Bear Flag (interview variant) | 215 | 15.8% | −74.21 | **fail** |
 | S8 HPS Swing Divergence | 82 | 37.8% | −79.23 | **fail** |
 
-All five lose money after costs, against the source PDF's claimed ~95% win rates — which is why win rate
-is never the gate. **Read them with their limits attached:** one six-month window of one market regime,
+**S1 is the only one that makes money** (+21.78 per trade after modelled fees and spread, profit factor
+1.38) and it is still `inconclusive`, for two separate reasons that both matter: 42 trades is well under
+the 100 §20 requires, and the walk-forward split found positive expectancy in only one of the two halves
+— an edge that lives in half a window is a candidate for a coincidence. The other six lose money after
+costs, against the source PDF's claimed ~95% win rates, which is why win rate is never the gate. **Read them with their limits attached:** one six-month window of one market regime,
 and the entries are the deterministic stand-ins each strategy declares in its `backtest` block
 (decision #60), not the Hermes plans the live system produces. They are not grounds to retire a
 strategy; they are grounds to promote none of it. **S6 vs S7** (spec §17 criterion 1): S7 is less bad
 per trade but lost four times as much in total; both losing, so no winner. **S5's optional ATR target
 could not be calibrated** — 43 of its 45 trades were stopped out and the target was never reached.
 
-Still open: **S1 and S3 have no full baseline yet** (both are screener strategies over the ~16k-symbol
-universe, so a real run is long). S2 is correctly absent — a briefing has no entry, stop or size, so
-there is nothing to replay, and the run says so rather than skipping silently.
+All seven backtestable strategies now have a baseline over the same window (S1 and S3 added 2026-09-11
+during Phase 8 — S1's screening pass covered 39,061 symbol-days to produce 133 candidate days and 42
+trades). S2 is correctly absent: a briefing has no entry, stop or size, so there is nothing to replay,
+and the run says so rather than skipping silently. **None may be promoted** — `/backtest/promote`
+requires a `pass`, and nothing here is one.
 
 ## Phase 8 operations (`/ops/*`)
 

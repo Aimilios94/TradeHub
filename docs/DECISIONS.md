@@ -492,3 +492,17 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     the whole row or believes it. Both counters now come from the funnel, and a test asserts every
     `symbol_days*` field on `Coverage` is written somewhere. **The Phase 7 rows recorded before this fix
     still carry 0 — read their `diagnostics.funnel` instead, which was always right.**
+95. **S1 is the only strategy in profit, and it still may not be promoted.** Baseline 2026-03-02 →
+    2026-09-05, 1,500-symbol screener universe (17.9% delisted): 42 trades, 42.9% win rate, expectancy
+    **+21.78** after modelled fees and spread, total +914.64, profit factor 1.38, max drawdown 2.58% of
+    equity. Verdict **inconclusive**, and both reasons are load-bearing: 42 trades is far under the 100
+    §20 demands, and the walk-forward split found positive expectancy in only one of the two halves. An
+    edge that lives in half a window is what a coincidence looks like, and 42 trades cannot distinguish
+    the two — so this is the promotion gate working on the one result somebody would actually want to
+    promote. The new coverage counters (#94) report the work behind it honestly for the first time:
+    39,061 symbol-days screened, 133 candidate days, 42 trades. All seven backtestable strategies now
+    have a baseline over the same window; none is a `pass`.
+96. **The paper month starts Monday 2026-09-14, not the day it was requested.** Stamped a weekday on
+    purpose: a 7-day block beginning on a Saturday holds only five weekdays, and a week needs scans on
+    four of them, so a single market holiday would have broken the streak and reset the clock (#89).
+

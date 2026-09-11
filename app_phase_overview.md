@@ -122,15 +122,22 @@ data provider refuse a whole batch of 100 — costing 99 good stocks their histo
 
 | Strategy | Trades | Win rate | Verdict |
 |---|---|---|---|
-| S3 Opening Range Break | 156 | — | **fail** (measured 11 Sept, see Phase 8) |
+| S1 Low-Float Gapper | 42 | 43% | not enough trades to say — but the only one in profit |
+| S3 SMB Stocks-in-Play | 156 | — | **fail** |
 | S4 HPS Quad Divergence | 150 | 34% | **fail** |
 | S5 20/20 Bull Flag | 45 | 9% | not enough trades to say |
 | S6 Bear Flag (PDF) | 54 | 11% | not enough trades to say |
 | S7 Bear Flag (variant) | 215 | 16% | **fail** |
 | S8 Swing Divergence | 82 | 38% | **fail** |
 
-All of them lose money after costs, against the PDF's claimed ~95% win rates. **Read this carefully
-before concluding anything:** it is one six-month window of one market, and the entry prices come from
+**S1 is the only one that makes money** — about $22 a trade after costs. Before reading anything into
+that: it only took 42 trades, which is too few to judge, and when the test split the six months in half
+the profit was in one half and not the other. That is the shape a lucky streak makes as well as the
+shape a real edge makes, and 42 trades cannot tell you which. The other six lose money after costs,
+against the PDF's claimed ~95% win rates.
+
+**Read all of it carefully before concluding anything:** it is one six-month window of one market, and
+the entry prices come from
 the backtester's own simple rules, not from the trade plans the AI writes live. It is not proof these
 strategies are bad — it is proof that none of them may be promoted yet, which is what the gate is for.
 
@@ -200,17 +207,30 @@ Condition 4 says **unknown**, not "fine". A stop that never had to fire tells yo
 it reacts, so it stays unverified until it fires once.
 
 **Two things the scorecard caught the first time it ran:**
-1. **S3 had never been backtested.** Six of seven strategies had a recorded run and nobody had noticed
-   the seventh was missing, because nothing was asking. Now run: 156 trades, **fail**, losing $10.29 per
-   trade after costs. That makes six of the seven measured strategies unprofitable on this window — the
-   condition asks only that the measurement exists, not that it flatters.
+1. **S3 had never been backtested, and S1's only run was a 12-day smoke test with no trades.** Nothing
+   was asking, so nobody had noticed. Both now have real baselines: S3 156 trades, **fail**, −$10.29 a
+   trade; S1 42 trades, **+$22 a trade but too few to judge**. The condition asks only that the
+   measurement exists, not that it flatters — and the scorecard now refuses to count a run that produced
+   zero trades or covered under 90 days as a baseline at all.
 2. **Two numbers in every backtest report were always zero** — "symbol-days screened" and "symbol-days
    passed" were being displayed but never counted. Fixed. Backtests recorded before today still show 0
    there; the funnel figures next to them were always correct.
 
-## ⬜ Phase 8 (part 2) — The paper month *(you start this)*
-Four straight weeks of the whole thing running daily on paper. Nothing about the code is waiting on you;
-this is calendar time and at least 20 journaled trades. Say the word and I will start the clock.
+## 🕒 Phase 8 (part 2) — The paper month *(running)*
+**Day zero is Monday 14 September 2026** — stamped on a weekday on purpose, because a week that starts
+on a Saturday holds only five trading days and one market holiday would break the streak and reset the
+clock.
+
+Four straight weeks from there, and at least 20 trades recorded. What it needs from you:
+
+- **Leave the PC and Docker on for the 08:00 ET scan.** A week only counts if the scan actually ran on
+  at least four of its days. A week where the machine was off does not count, and the streak restarts.
+- **Activate workflow 11 in n8n** (localhost:5678) — without it there is no nightly backup and no Sunday
+  scorecard. The other ten are already running.
+- **Tap Deploy on real signals.** The 20 trades and the deploy speed can only come from your taps;
+  nothing about waiting produces them.
+
+You will get the scorecard in plain English every Sunday evening. Progress any time: `/ops/acceptance`.
 
 ## ⬜ Phase 9 — User interface
 The dashboard. Deliberately last, after the engine has proven itself.
@@ -218,12 +238,16 @@ The dashboard. Deliberately last, after the engine has proven itself.
 ---
 
 ### Now due
-Run `/improve-codebase-architecture` — it scans the code for parts that grew awkward and suggests
+Phase 9 — the dashboard. The paper month is four weeks of waiting, the UI is four weeks of work, so they
+run side by side.
+
+Also available: `/improve-codebase-architecture` — it scans the code for parts that grew awkward and suggests
 tidy-ups, as a visual report. It was deliberately saved until the backtester was done — it is done, so
 this can run now. `/diagnosing-bugs` is installed too and can be used any time something breaks.
 
 ### Waiting on you
-- **Start the paper month** — say the word and I start the four-week clock. Nothing else is blocking it.
+- **Activate workflow 11** in n8n (localhost:5678) — the nightly backup and Sunday scorecard.
+- **Keep the machine on at 08:00 ET** for the four weeks, and tap Deploy on the signals you like.
 - **Your own go-live steps**, whenever you get to them: fund the account modestly, file the W-8BEN with
   Alpaca, pick one small first strategy, and confirm the tax treatment with an accountant. The scorecard
   tracks these as yours; the engine will never tick them off for you.
