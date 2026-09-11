@@ -21,6 +21,7 @@ from email.utils import parsedate_to_datetime
 import httpx
 
 from app.config import get_settings
+from app.ops import resilience
 
 log = logging.getLogger(__name__)
 
@@ -91,12 +92,15 @@ def fetch_finnhub(symbol: str, day: dt.date, lookback_days: int = 2) -> SourceRe
     if not key:
         return SourceResult("finnhub", "skipped", error="FINNHUB_API_KEY not set")
     frm = (day - dt.timedelta(days=lookback_days)).isoformat()
-    try:
+    def _get():
         r = httpx.get("https://finnhub.io/api/v1/company-news",
                       params={"symbol": symbol, "from": frm, "to": day.isoformat(), "token": key},
                       timeout=TIMEOUT)
         r.raise_for_status()
-        raw = r.json()
+        return r.json()
+
+    try:
+        raw = resilience.call("finnhub", _get, what=f"company-news({symbol})")
     except Exception as e:  # noqa: BLE001
         return SourceResult("finnhub", "failed", error=f"{type(e).__name__}: {str(e)[:160]}")
     if not isinstance(raw, list):
@@ -139,12 +143,15 @@ def parse_yahoo_rss(xml_text: str) -> list[NewsItem]:
 
 
 def fetch_yahoo(symbol: str) -> SourceResult:
-    try:
+    def _get():
         r = httpx.get(YAHOO_RSS, params={"s": symbol, "region": "US", "lang": "en-US"},
                       timeout=TIMEOUT, follow_redirects=True,
                       headers={"User-Agent": "Mozilla/5.0 (compatible; tradehub/0.1)"})
         r.raise_for_status()
-        items = parse_yahoo_rss(r.text)
+        return r.text
+
+    try:
+        items = parse_yahoo_rss(resilience.call("yahoo", _get, what=f"rss({symbol})"))
     except ET.ParseError as e:
         return SourceResult("yahoo", "failed", error=f"RSS parse error: {str(e)[:160]}")
     except Exception as e:  # noqa: BLE001
@@ -169,14 +176,17 @@ def fetch_reddit(symbol: str, subs: tuple[str, ...] = DEFAULT_SUBS) -> SourceRes
     s = get_settings()
     if not (s.reddit_client_id and s.reddit_client_secret):
         return SourceResult("reddit", "skipped", error="no credentials - set REDDIT_CLIENT_ID/SECRET in .env")
-    try:
-        token = _reddit_token()
+    def _get(token: str):
         r = httpx.get("https://oauth.reddit.com/r/" + "+".join(subs) + "/search",
                       params={"q": symbol, "restrict_sr": 1, "sort": "new", "t": "day", "limit": 25},
                       headers={"Authorization": f"Bearer {token}", "User-Agent": s.reddit_user_agent},
                       timeout=TIMEOUT)
         r.raise_for_status()
-        children = r.json().get("data", {}).get("children", [])
+        return r.json().get("data", {}).get("children", [])
+
+    try:
+        token = resilience.call("reddit", _reddit_token, what="access_token")
+        children = resilience.call("reddit", lambda: _get(token), what=f"search({symbol})")
     except Exception as e:  # noqa: BLE001
         return SourceResult("reddit", "failed", error=f"{type(e).__name__}: {str(e)[:160]}")
     items = []

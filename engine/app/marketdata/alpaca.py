@@ -16,6 +16,7 @@ from functools import lru_cache
 from zoneinfo import ZoneInfo
 
 from app.config import get_settings
+from app.ops import resilience
 
 ET = ZoneInfo("America/New_York")
 FEEDS = ("iex", "sip")
@@ -100,7 +101,11 @@ def get_bars(symbols: list[str], start: dt.datetime, end: dt.datetime, *, feed: 
     # TOTAL rows (not the page size) and silently drops later symbols in multi-symbol requests.
     req = StockBarsRequest(symbol_or_symbols=list(symbols), timeframe=_timeframe(timeframe), start=start, end=end,
                            feed=_feed_enum(feed), limit=None)
-    res = _client().get_stock_bars(req)
+    # Paced and retried (Phase 8). A bars fetch is idempotent, so a 429 or a dropped connection is worth
+    # another attempt; an invalid symbol is not, and `is_transient` re-raises that one immediately so the
+    # batch bisection in app/backtest/bars.py still sees the real error (decision #73).
+    res = resilience.call("alpaca_data", lambda: _client().get_stock_bars(req),
+                          what=f"get_bars({len(symbols)} symbols, {timeframe}, {feed})")
     out: list[Bar] = []
     for sym, bars in res.data.items():
         for b in bars:
@@ -117,8 +122,9 @@ def get_latest_quotes(symbols: list[str], *, feed: str = "iex") -> dict[str, dic
 
     if not symbols:
         return {}
-    res = _client().get_stock_latest_quote(
-        StockLatestQuoteRequest(symbol_or_symbols=list(symbols), feed=_feed_enum(feed)))
+    req = StockLatestQuoteRequest(symbol_or_symbols=list(symbols), feed=_feed_enum(feed))
+    res = resilience.call("alpaca_data", lambda: _client().get_stock_latest_quote(req),
+                          what=f"get_latest_quotes({len(symbols)})")
     out: dict[str, dict] = {}
     for sym, q in res.items():
         bid, ask = float(q.bid_price), float(q.ask_price)
@@ -133,7 +139,9 @@ def get_snapshots(symbols: list[str], *, feed: str = "iex") -> dict[str, dict]:
 
     if not symbols:
         return {}
-    res = _client().get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols=list(symbols), feed=_feed_enum(feed)))
+    req = StockSnapshotRequest(symbol_or_symbols=list(symbols), feed=_feed_enum(feed))
+    res = resilience.call("alpaca_data", lambda: _client().get_stock_snapshot(req),
+                          what=f"get_snapshots({len(symbols)})")
     out: dict[str, dict] = {}
     for sym, snap in res.items():
         q, t, db, pdb = snap.latest_quote, snap.latest_trade, snap.daily_bar, snap.previous_daily_bar

@@ -16,6 +16,7 @@ Planned workflows (one file each, added per phase):
 | `08_guardian_briefing.json` | Telegram `/guardian [question]` | `POST /guardian/briefing` | 6.5 ✅ |
 | `09_rules_freshness_monthly.json` | cron 1st 10:00 ET | `POST /guardian/rules-check` | 6.5 ✅ |
 | `10_backtest_queue_weekly.json` | cron Sun 11:00 ET | `POST /backtest/queue/run` | 7 ✅ |
+| `11_ops_nightly.json` | cron 23:30 daily + Sun 18:00 ET | `POST /ops/backup` · `GET /ops/acceptance?notify=true` → `POST /ops/drill` | 8 ✅ |
 | ~~`10_telegram_alerts.json`~~ | webhook from engine | Telegram | never built — the engine sends its own alerts directly (`app/notify.py`), so that number was reused above |
 
 These files are the design source of truth. Deployment state (the workflow `id`, `active`) is not tracked

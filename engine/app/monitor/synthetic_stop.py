@@ -23,6 +23,7 @@ import asyncio
 import datetime as dt
 import logging
 import os
+import time
 
 from app.broker import account as broker_account
 from app.broker import orders as broker_orders
@@ -90,6 +91,23 @@ def build_watchlist(day: dt.date | None = None) -> dict[str, Watch]:
     return out
 
 
+def write_heartbeat(watching: int, error: str = "") -> None:
+    """Phase 8: say "I am alive" into `app_settings.monitor_heartbeat` on every refresh.
+
+    This container is the ONLY protection a pre-market position has — a broker stop pre-market is
+    accepted and never triggered (docs/BROKER_RULES.md R1). Before this, a monitor that had silently
+    died looked exactly like a monitor with nothing to do. `ops.preflight.check_monitor` reads the
+    timestamp and escalates to red during pre-market when it goes quiet.
+    """
+    try:
+        get_client().table("app_settings").update({"value": {
+            "at": dt.datetime.now(dt.UTC).isoformat(), "watching": watching,
+            "refresh_seconds": REFRESH_SECONDS, "error": error or None,
+        }}).eq("key", "monitor_heartbeat").execute()
+    except Exception as e:  # noqa: BLE001 — a heartbeat that fails must not stop the watching
+        log.warning("heartbeat write failed: %s", e)
+
+
 class SyntheticStopMonitor:
     def __init__(self) -> None:
         self._watch: dict[str, Watch] = {}
@@ -99,11 +117,17 @@ class SyntheticStopMonitor:
 
     # ---------- firing ----------
 
-    def fire(self, w: Watch, price: float, source: str) -> None:
-        """Close the position with one bounded limit order. Fires at most once per symbol."""
+    def fire(self, w: Watch, price: float, source: str, *, breached_at: float | None = None) -> None:
+        """Close the position with one bounded limit order. Fires at most once per symbol.
+
+        `breached_at` is the monotonic clock reading from the moment the breaching print arrived, so the
+        reaction time §17 criterion 4 gates on (< 1s) is measured rather than assumed. It is stored on
+        the `compliance_events` row; `ops.acceptance` reads it back.
+        """
         if w.symbol in self._fired:
             return
         self._fired.add(w.symbol)
+        breached_at = breached_at if breached_at is not None else time.monotonic()
         limit = w.exit_limit()
         side = "sell" if w.long else "buy"
         log.warning("STOP BREACH %s at %s (%s) — exiting %s %s @ limit %s",
@@ -115,14 +139,18 @@ class SyntheticStopMonitor:
                    f"order was refused: {type(e).__name__}: {str(e)[:200]}")
             log.error(msg)
             guardian.log_event(kind="failure", verdict="red", symbol=w.symbol, signal_id=w.signal_id,
-                               reason=msg, detail={"price": price, "stop": w.stop})
+                               reason=msg, detail={"price": price, "stop": w.stop,
+                                                   "reaction_ms": round((time.monotonic() - breached_at) * 1000, 1)})
             send_telegram(f"🚨 {msg}\nThe position is STILL OPEN and unprotected — act manually.")
             return
 
         o = submitted["order"]
-        guardian.log_event(kind="gate_warn", verdict="yellow", symbol=w.symbol, signal_id=w.signal_id,
-                           reason=f"synthetic stop fired at {price} (stop {w.stop}); exit limit {limit}",
-                           detail={"alpaca_order_id": o["id"], "source": source})
+        reaction_ms = round((time.monotonic() - breached_at) * 1000, 1)
+        guardian.log_event(kind="synthetic_stop", verdict="yellow", symbol=w.symbol, signal_id=w.signal_id,
+                           reason=f"synthetic stop fired at {price} (stop {w.stop}); exit limit {limit} "
+                                  f"in {reaction_ms:.0f}ms",
+                           detail={"alpaca_order_id": o["id"], "source": source, "reaction_ms": reaction_ms,
+                                   "price": price, "stop": w.stop})
         try:
             get_client().table("orders").insert([{
                 "signal_id": w.signal_id, "source": "exit_plugin", "alpaca_order_id": o["id"],
@@ -137,12 +165,13 @@ class SyntheticStopMonitor:
         except Exception as e:  # noqa: BLE001
             log.error("synthetic stop order not logged for %s: %s", w.symbol, e)
         send_telegram(f"🛑 SYNTHETIC STOP {w.symbol}\nbreach {price} (stop {w.stop}) via {source}\n"
-                      f"{side.upper()} {w.qty} @ limit {limit} · status {o['status']}")
+                      f"{side.upper()} {w.qty} @ limit {limit} · status {o['status']} · {reaction_ms:.0f}ms")
 
     def on_price(self, symbol: str, price: float, source: str) -> None:
+        seen_at = time.monotonic()          # start the clock at the print, not after the lookups
         w = self._watch.get(symbol)
         if w and w.symbol not in self._fired and w.breached(price):
-            self.fire(w, price, source)
+            self.fire(w, price, source, breached_at=seen_at)
 
     # ---------- stream plumbing ----------
 
@@ -173,8 +202,10 @@ class SyntheticStopMonitor:
             fresh = await asyncio.to_thread(build_watchlist)
         except Exception as e:  # noqa: BLE001
             log.error("watchlist refresh failed: %s", e)
+            await asyncio.to_thread(write_heartbeat, 0, f"watchlist refresh failed: {str(e)[:140]}")
             return
         self._watch = fresh
+        await asyncio.to_thread(write_heartbeat, len(fresh), "")
         for symbol in set(self._watch) - self._fired:
             if symbol in self._subscribed:
                 continue

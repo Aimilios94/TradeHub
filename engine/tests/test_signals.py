@@ -287,7 +287,33 @@ def test_unknown_tier_is_refused():
 
 # ---------- orchestrator + endpoints ----------
 
+def test_run_refuses_to_plan_on_a_stale_feed_before_spending_a_single_token(monkeypatch):
+    """Plan §33. A plan written on a four-minute-old price is a plan for a market that has moved on,
+    and it would look exactly like a good one. The check runs BEFORE the model call, so a stale feed
+    costs nothing."""
+    stale = signals_run.ops_preflight.Check("data_feed", "red", "SPY quote is 412s old (limit 60s)")
+
+    def blocked(*a, **kw):
+        raise signals_run.ops_preflight.PreflightBlocked(
+            stale.detail, signals_run.ops_preflight.Preflight(checks=[stale], computed_at=""))
+
+    monkeypatch.setattr(signals_run.ops_preflight, "assert_data_fresh", blocked)
+    monkeypatch.setattr(signals_run.openrouter, "available",
+                        lambda: pytest.fail("no model call may happen on a stale feed"))
+    sent: list[str] = []
+    monkeypatch.setattr(signals_run, "send_telegram", lambda t: sent.append(t) or True)
+
+    res = signals_run.run_signals(notify=True)
+    assert res.signals_written == 0 and res.errors and "412s old" in res.errors[0]
+    assert any("refuses to plan on stale prices" in n for n in res.notes)
+    assert sent and "ABORTED" in sent[0] and "none were guessed" in sent[0]
+
+
 def test_run_aborts_when_the_hosted_tier_is_unavailable(monkeypatch):
+    # Phase 8 put the §33 staleness guard in front of the model check, so the feed is stubbed fresh
+    # here: this test is about the hosted tier, and it must not depend on the market being open.
+    monkeypatch.setattr(signals_run.ops_preflight, "assert_data_fresh",
+                        lambda *a, **kw: signals_run.ops_preflight.Check("data_feed", "green", "stubbed"))
     monkeypatch.setattr(signals_run.openrouter, "available", lambda: (False, "credit exhausted"))
     sent: list[str] = []
     monkeypatch.setattr(signals_run, "send_telegram", lambda t: sent.append(t) or True)

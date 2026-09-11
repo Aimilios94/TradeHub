@@ -7,7 +7,8 @@ Phase 3 adds /enrich/* (app/sentiment/router.py); Phase 4 adds /signals/* (app/s
 Phase 5 adds /execute/* (app/execution/router.py);
 Phase 6 adds /journal/*, /analytics/* and /review/* (app/journal/router.py);
 Phase 6.5 adds /guardian/* (app/guardian/router.py);
-Phase 7 adds /backtest/* (app/backtest/router.py); later phases add routers under app/<module>/router.py.
+Phase 7 adds /backtest/* (app/backtest/router.py); Phase 8 adds /ops/* (app/ops/router.py);
+later phases add routers under app/<module>/router.py.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from app.execution.router import router as execution_router
 from app.guardian.router import router as guardian_router
 from app.journal.router import router as journal_router
 from app.marketdata.router import router as data_router
+from app.ops.router import router as ops_router
 from app.registry import ALL_PLUGINS, DETECTORS, EXITS
 from app.scanner.router import router as scan_router
 from app.seed import frameworks as seed_frameworks
@@ -42,6 +44,7 @@ app.include_router(execution_router)
 app.include_router(journal_router)
 app.include_router(guardian_router)
 app.include_router(backtest_router)
+app.include_router(ops_router)
 
 
 @app.get("/health")

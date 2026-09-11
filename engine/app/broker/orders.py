@@ -161,6 +161,13 @@ def submit(*, symbol: str, side: str, qty: int, order_type: str = "limit", limit
                    "extended_hours": extended_hours, "order_class": order_class,
                    "client_order_id": coid, "session_phase": phase}
     log.info("submitting order: %s", request_log)
+    # NOT wrapped in a retry helper — deliberately, and Phase 8 left it that way. A submission
+    # is not idempotent: a timeout could mean the broker never saw the order or that it filled and the
+    # reply was lost, and nothing at this end can tell those apart. Retrying the second case buys the
+    # position twice. A failure here surfaces to the caller, which records it and stops; the truth is
+    # then recovered by reconciliation (`/execute/orders/sync`), not by guessing.
+    # `client_order_id` is the second half of that safety: Alpaca rejects a duplicate, so even a manual
+    # re-send of the same ticket cannot silently double up.
     order = _trading_client().submit_order(req)
     return {"order": _order_to_dict(order), "request": request_log}
 

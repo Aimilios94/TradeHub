@@ -16,6 +16,7 @@ import httpx
 
 from app.config import get_settings
 from app.llm.errors import LLMInvalidJSON, LLMUnavailable
+from app.ops import resilience
 
 log = logging.getLogger(__name__)
 
@@ -68,9 +69,13 @@ def chat_json(system: str, user: str, *, model: str | None = None, timeout: floa
         "stream": False,
         "options": {"temperature": 0},
     }
-    try:
+    def _post():
         r = httpx.post(f"{base_url()}/api/chat", json=body, timeout=timeout)
         r.raise_for_status()
+        return r
+
+    try:
+        r = resilience.call_preserving_error("ollama", _post, what=f"chat_json({body['model']})")
     except httpx.ConnectError as e:
         raise LLMUnavailable(
             f"Ollama unreachable at {base_url()} — is it running? (ollama serve; ollama pull {body['model']})"

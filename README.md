@@ -12,7 +12,7 @@ Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_i
 
 ## Repository layout
 ```
-engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/guardian/{briefing,rules}.py (Phase 6.5), app/detectors/{indicators,structure}.py + app/exits/plugins.py + app/backtest/ (Phase 7)
+engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/guardian/{briefing,rules}.py (Phase 6.5), app/detectors/{indicators,structure}.py + app/exits/plugins.py + app/backtest/ (Phase 7), app/ops/ (Phase 8)
   scripts/gen_seed.py   generates supabase/migrations/0002_seed.sql (single source of truth = Python + prompt-library)
   scripts/apply_sql.py  applies a migration, or only the seed statements that changed (--grep, --dry-run)
   tests/                pytest
@@ -91,7 +91,7 @@ three gotchas (batch tag collision, Git Bash path mangling, imports arrive inact
 | 6 | `/journal/eod` (FIFO round trips + Guardian Layer-2 ledger), `/analytics/report` (§14), `/review/weekly` (templates 05+06 → `hypotheses`), degradation trigger; n8n crons 06/07 | **done 2026-09-10** (proposals only — nothing is auto-applied) |
 | 6.5 | `/guardian/briefing` (Layer 3, plain-language state report, reachable as `/guardian` in Telegram) + `/guardian/rules-check` (monthly source-page freshness → `compliance_events`); `docs/BROKER_RULES.md`; n8n crons 08/09 | **done 2026-09-10** |
 | 7 | `/backtest/*`: scanner-universe replay with the four §13 countermeasures (survivorship coverage, IEX↔SIP calibration, an explicit pessimistic fill model, min-sample + walk-forward guards); the remaining 23 detectors and 9 exit plugins, so the registry is fully implemented; per-strategy `BacktestSpec` (migration 0006); parquet bar cache; hypothesis grading + `/backtest/promote`; n8n cron 10 | **done 2026-09-11** (baselines recorded for S4–S8; **S1 and S3 full baselines still to run** — see below. Nothing is auto-applied; promotion needs a passing backtest and live is still refused in code) |
-| 8 | hardening, onboarding, failure policy, tunnel, then ≥ 4-week paper month | |
+| 8 | `app/ops/*`: retry + per-provider rate-limit guards (reads only — an order submission is never auto-retried), §33 failure policy as blocking checks in front of the Guardian gate, one central failure recorder, the Guardian fire drill, the measured §17 go-live scorecard, nightly backup + checksum-verified restore, `scripts/onboarding.py`; n8n cron 11 | **hardening done 2026-09-11** — the ≥ 4-week paper month is calendar time and starts on the owner's word. Cloudflare/Tailscale tunnel deferred to Phase 9, when the UI needs it |
 | 9 | UI (React + Tailwind against the mockup) | |
 | E1→E2→E5→FL→E3→E4 | extension modules, after the paper month | |
 
@@ -117,6 +117,32 @@ could not be calibrated** — 43 of its 45 trades were stopped out and the targe
 Still open: **S1 and S3 have no full baseline yet** (both are screener strategies over the ~16k-symbol
 universe, so a real run is long). S2 is correctly absent — a briefing has no entry, stop or size, so
 there is nothing to replay, and the run says so rather than skipping silently.
+
+## Phase 8 operations (`/ops/*`)
+
+| Endpoint | What it answers |
+|---|---|
+| `GET /ops/preflight` | May the engine open a position right now, and if not, which check says no |
+| `GET /ops/quote-age` | How old the newest IEX quote is, against `failure_policy.data_stale_seconds` |
+| `GET /ops/rate-limits` | The pacing the engine applies to itself, per provider |
+| `POST /ops/drill` | Force all ten Guardian checks to block, once (§17.3). Submits nothing |
+| `GET /ops/acceptance` | The §17 gate to real money, measured. Grants nothing |
+| `POST /ops/paper-month/start` | Stamp day zero of the four-week clock |
+| `GET /ops/reconcile` | Is every ledger fee row backed by an activity id or labelled `estimated` |
+| `POST /ops/backup` · `GET /ops/backups` | Take / list a backup (restore is CLI only) |
+| `GET /ops/failures` · `GET /ops/incident-log` | What has been going wrong, and what keeps recurring |
+| `POST /ops/selftest` · `POST /ops/test-alert` | Connectivity and the alert path, end to end |
+
+Three properties worth knowing before changing anything here:
+
+- **`unknown` blocks exactly as `red` does.** A check that could not be evaluated never passes — "we
+  could not reach the broker, assume it is fine" is the failure §33 was written against. Blocking is
+  asymmetric: a red stops a new ENTRY, never an exit, a reconciliation or the synthetic stop.
+- **Only reads are retried.** `broker.orders.submit` is deliberately outside `ops/resilience`, because a
+  timeout cannot be told apart from a silent fill; a test reads its source to prove no retry wrapper has
+  appeared. Recovery is `/execute/orders/sync`, not a second attempt.
+- **The scorecard cannot grant permission.** Criterion 5 is the owner's permanently, and live trading
+  stays refused in `app/broker/orders.assert_paper_only` regardless (decision #37).
 
 ## Non-negotiables (from the spec)
 Strategies are data, never code · LLMs never compute · keys never reach the frontend · pre-market = limit only, synthetic stop, no brackets · only `buying_power` (PDT fields are gone) · same feed on both sides of every relative-volume ratio (SIP baseline vs SIP live — decision #10) · paper trading before live · win rate is never the gate · not financial advice; tax provision is a display estimate.

@@ -36,6 +36,15 @@ Quick reference for what's in the app and how to use it. Keep this updated whene
 
 Telegram alerts · synthetic stops · economic calendar warnings · self-learning loop
 
+**Safety net (Phase 8):** before any order the app checks that the broker answers, the database is up,
+the kill switch is off, the price is actually fresh and the pre-market stop watcher is alive — anything
+it cannot check **blocks** the order rather than assuming it is fine. It never blocks *closing* a
+position. A half-finished scan says "PIPELINE INCOMPLETE" before it says anything else, and it will not
+write trade plans on a stale price. Every table is backed up to your PC at 23:30 with a checksum, and
+restoring adds back what is missing without deleting what is newer. Every Sunday the ten Guardian
+safety checks are drilled (each one forced to block, no real order sent) and you get the go-live
+scorecard in plain English on Telegram.
+
 ---
 
 ## TOOLS WE USE

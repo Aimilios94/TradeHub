@@ -18,6 +18,7 @@ import httpx
 
 from app.config import get_settings
 from app.llm.errors import LLMInvalidJSON, LLMUnavailable
+from app.ops import resilience
 
 log = logging.getLogger(__name__)
 
@@ -58,10 +59,15 @@ def chat_json_with_usage(system: str, user: str, *, model: str | None = None,
         "temperature": 0,
     }
     headers = {"Authorization": f"Bearer {s.openrouter_api_key}", "Content-Type": "application/json", **APP_HEADERS}
-    try:
+    def _post():
         r = httpx.post(f"{BASE_URL}/chat/completions", json=body, headers=headers, timeout=timeout)
         r.raise_for_status()
-        data = r.json()
+        return r.json()
+
+    try:
+        # Retried on 429/5xx/timeout only, and the provider's own error is preserved so the
+        # translations below still produce "credit exhausted" rather than a generic retry failure.
+        data = resilience.call_preserving_error("openrouter", _post, what=f"chat_json({use_model})")
     except httpx.HTTPStatusError as e:
         detail = e.response.text[:300]
         if e.response.status_code in (401, 403):

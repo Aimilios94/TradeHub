@@ -39,6 +39,10 @@ tier; OpenRouter (Hermes 70B/405B) does judgment. Docker runs `engine`, `n8n` an
 
 - **Live trading is refused in code** (`app/broker/orders.assert_paper_only`) until Phase 8's paper month.
   Not a flag — an exception. Do not lift it without an explicit, separate, owner-approved commit.
+  `/ops/acceptance` measures the §17 gate; it grants nothing, and criterion 5 is the owner's forever.
+- **Reads are retried, writes are not** (`app/ops/resilience.py`, decision #79). A broker timeout cannot
+  be told apart from a silent fill, so `broker.orders.submit` is never wrapped in a retry — a test reads
+  its source to prove no wrapper has appeared. Reconcile with `/execute/orders/sync` instead.
 - **Nothing executes without the owner's tap.** `auto_approve` exists, ships OFF, and the deploy path does
   not read it. Approval arrives as a Telegram button (workflow 04).
 - **Fail safe, never fake** (plan §33). A missing figure is reported missing. A model answer that fails
@@ -92,10 +96,13 @@ installer's source copy; `skills-lock.json` pins the versions. Update with `npx 
 
 ```powershell
 cd engine
-.\.venv\Scripts\python -m pytest -q          # 349 tests, all offline
+.\.venv\Scripts\python -m pytest -q          # 391 tests, all offline
 .\.venv\Scripts\python -m ruff check app tests
 .\.venv\Scripts\python scripts\gen_seed.py   # after editing seed sources
 .\.venv\Scripts\python scripts\check_env.py  # credential readiness, never prints secrets
+.\.venv\Scripts\python scripts\onboarding.py --check   # what is set / risk limits / active strategies
+.\.venv\Scripts\python scripts\backup.py --list         # Phase 8 backups on disk
+.\.venv\Scripts\python scripts\restore.py <folder>     # dry run; add --yes to write
 .\.venv\Scripts\python scripts\apply_sql.py ..\supabase\migrations\0006_backtest_spec.sql
 .\.venv\Scripts\python scripts\apply_sql.py --grep "insert into strategy_configs" ..\supabase\migrations\0002_seed.sql
 ```

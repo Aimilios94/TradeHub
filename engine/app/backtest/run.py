@@ -307,6 +307,12 @@ def run_backtest(code: str, date_from: dt.date, date_to: dt.date, *, strategy_id
     res.walk_forward = M.walk_forward(trades, min_trades=min_trades)
     v, detail = M.verdict(res.metrics, criteria, style=str(cfg.style), walk=res.walk_forward)
     res.verdict, res.verdict_detail = v, detail
+    # The funnel counts the real screening work; `Coverage` declared the same two numbers and nothing
+    # ever incremented them, so every backtest reported `symbol_days_passed: 0` right next to a funnel
+    # that said 156 trades happened. A field that always answers zero is worse than an absent one — a
+    # reader either distrusts the whole row or believes it.
+    cov.symbol_days_screened = funnel["screened"]
+    cov.symbol_days_passed = funnel["candidates"]
     res.coverage = cov.finish(expect_delisted=is_screener and include_inactive).as_dict()
     res.diagnostics = {
         "funnel": funnel, "notes": notes, "bars": daily_stats,

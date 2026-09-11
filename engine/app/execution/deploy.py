@@ -6,12 +6,21 @@ is logged to `compliance_events` and the signal is marked rejected — never ret
 
 Human-in-the-loop (§12 rule 1): `auto_approve` exists as a setting, ships OFF, and this module refuses
 to act on it. A deploy always originates from the owner's tap.
+
+Phase 8 adds two things either side of the Guardian gate:
+
+  * the §33 failure policy runs FIRST (`ops.preflight`). The Guardian asks "is this order sane"; the
+    preflight asks "is the system in a fit state to trade at all" — a stale feed makes a perfectly sane
+    order a bet on a price that no longer exists, and the Guardian has no way to know that.
+  * the tap→broker latency is measured and stored on the order row, because §17 criterion 4 gates real
+    money on "Deploy→order ≤ 2s" and a number nobody recorded cannot be verified after the fact.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 import logging
+import time
 from dataclasses import dataclass, field
 
 from app.broker import account as broker_account
@@ -20,6 +29,7 @@ from app.db import get_client
 from app.guardian import gate as guardian
 from app.marketdata import alpaca
 from app.notify import send_telegram
+from app.ops import preflight as ops_preflight
 
 log = logging.getLogger(__name__)
 
@@ -41,11 +51,14 @@ class DeployResult:
     order_row_id: str | None = None
     reason: str = ""
     warnings: list[str] = field(default_factory=list)
+    preflight: dict = field(default_factory=dict)
+    latency_ms: float | None = None
 
     def as_dict(self) -> dict:
         return {"signal_id": self.signal_id, "symbol": self.symbol, "submitted": self.submitted,
                 "gate_verdict": self.gate_verdict, "gate": self.gate, "order": self.order,
-                "order_row_id": self.order_row_id, "reason": self.reason, "warnings": self.warnings}
+                "order_row_id": self.order_row_id, "reason": self.reason, "warnings": self.warnings,
+                "preflight": self.preflight, "latency_ms": self.latency_ms}
 
 
 def load_signal(signal_id: str) -> dict:
@@ -64,7 +77,7 @@ def strategy_risk(strategy_id: str) -> tuple[dict, str]:
 
 
 def write_order_row(*, signal: dict, submitted: dict, gate: guardian.GateResult,
-                    quote_mid: float | None) -> str | None:
+                    quote_mid: float | None, latency_ms: float | None = None) -> str | None:
     o = submitted["order"]
     req = submitted["request"]
     row = {
@@ -79,7 +92,9 @@ def write_order_row(*, signal: dict, submitted: dict, gate: guardian.GateResult,
         "filled_qty": o["filled_qty"], "filled_avg_price": o["filled_avg_price"],
         "filled_at": o["filled_at"], "quote_mid_at_submit": quote_mid,
         "submitted_at": o["submitted_at"], "raw_request": req,
-        "raw_response": o | {"guardian": gate.as_dict()},
+        # `deploy_latency_ms` is the owner's tap → the broker's acknowledgement, in one place the
+        # acceptance scorecard can read it back from (§17 criterion 4).
+        "raw_response": o | {"guardian": gate.as_dict(), "deploy_latency_ms": latency_ms},
     }
     try:
         res = get_client().table("orders").insert([row]).execute()
@@ -106,6 +121,7 @@ def deploy(signal_id: str, *, now: dt.datetime | None = None, dry_run: bool = Fa
            notify: bool = True, override_qty: int | None = None) -> DeployResult:
     """Approve and submit one signal. The owner's tap is the only thing that calls this."""
     now = now or alpaca.now_et()
+    started = time.monotonic()
     res = DeployResult(signal_id=signal_id)
 
     signal = load_signal(signal_id)
@@ -114,6 +130,19 @@ def deploy(signal_id: str, *, now: dt.datetime | None = None, dry_run: bool = Fa
         res.reason = (f"signal is '{signal['status']}', not 'proposed' — "
                       f"{'already acted on' if signal['status'] in ('approved', 'executed') else 'not deployable'}")
         raise DeployRefused(res.reason)
+
+    # §33 first: a stale feed or an unreachable broker makes even a perfect order a bet on a price that
+    # no longer exists, and the Guardian's checks cannot see that. A dry run still evaluates it — the
+    # owner asking "would this go through?" deserves the real answer, including this reason.
+    try:
+        res.preflight = ops_preflight.assert_can_enter(symbol=signal["symbol"], now=now).as_dict()
+    except ops_preflight.PreflightBlocked as e:
+        res.preflight = e.result.as_dict()
+        res.reason = f"failure policy (plan §33): {e}"
+        mark_signal(signal_id, "rejected", res.reason)
+        if notify:
+            send_telegram(f"⛔ BLOCKED {signal['symbol']}\n{res.reason}\nNo order was placed.")
+        return res
 
     risk, code = strategy_risk(signal["strategy_id"])
     qty = override_qty if override_qty is not None else signal.get("size")
@@ -174,10 +203,19 @@ def deploy(signal_id: str, *, now: dt.datetime | None = None, dry_run: bool = Fa
             send_telegram(f"⚠️ ORDER ERROR {signal['symbol']} ({code})\n{res.reason}")
         raise DeployRefused(res.reason) from e
 
+    res.latency_ms = round((time.monotonic() - started) * 1000, 1)
     res.submitted = True
     res.order = submitted["order"]
-    res.order_row_id = write_order_row(signal=signal, submitted=submitted, gate=gate, quote_mid=quote_mid)
+    res.order_row_id = write_order_row(signal=signal, submitted=submitted, gate=gate, quote_mid=quote_mid,
+                                       latency_ms=res.latency_ms)
     mark_signal(signal_id, "executed" if res.order["status"] == "filled" else "approved")
+
+    if res.latency_ms > 2_000:  # §17 criterion 4 — the breach is recorded when it happens, not averaged later
+        from app.ops import failures
+
+        failures.failure("latency", f"deploy→order took {res.latency_ms:.0f}ms, over the 2000ms §17 budget",
+                         key="deploy_latency", symbol=signal["symbol"], severity="warn",
+                         detail={"latency_ms": res.latency_ms, "signal_id": signal_id})
 
     if notify:
         warn = f"\n⚠️ {'; '.join(gate.warnings)}" if gate.warnings else ""
@@ -185,5 +223,5 @@ def deploy(signal_id: str, *, now: dt.datetime | None = None, dry_run: bool = Fa
             f"✅ ORDER PLACED {signal['symbol']} ({code})\n"
             f"{side.upper()} {qty} @ limit {entry}  stop {stop}  target {signal.get('target')}\n"
             f"status {res.order['status']} · extended_hours={res.order['extended_hours']}\n"
-            f"guardian {gate.verdict}{warn}")
+            f"guardian {gate.verdict}{warn} · {res.latency_ms:.0f}ms")
     return res

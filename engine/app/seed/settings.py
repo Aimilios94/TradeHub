@@ -168,7 +168,95 @@ APP_SETTINGS: dict[str, dict] = {
             "stale_data_action": "mark stale, refuse to generate or deploy signals",
             "pipeline_incomplete": "notice instead of partial signals; log compliance_event",
             "llm_failure": "show real error and stop; never fabricate",
+            "monitor_heartbeat_seconds": 180,
+            "alert_cooldown_minutes": 30,
+            "block_entries_when_broker_unreachable": True,
+            "block_entries_when_data_stale": True,
         },
-        "description": "Fail safe, never fake (plan §33).",
+        "description": (
+            "Fail safe, never fake (plan §33) — and since Phase 8 these are the numbers the code actually "
+            "reads, not a description of intent. `app/ops/preflight.py` runs every clause as a named check "
+            "in front of the Guardian gate: a stale quote or an unreachable broker blocks a NEW entry and "
+            "never an exit. `data_stale_seconds` is measured on IEX only, because the free plan delays SIP "
+            "~15 minutes by subscription and measuring freshness against it would flag a healthy feed daily. "
+            "`monitor_heartbeat_seconds` is how long the synthetic stop watcher may stay silent before "
+            "pre-market goes red — it is the only protection a pre-market position has. "
+            "`alert_cooldown_minutes` deduplicates the Telegram ping only; the `compliance_events` row is "
+            "written every single time, because the count is the evidence."
+        ),
+    },
+    "rate_limits": {
+        "value": {
+            "alpaca_data": {"per_minute": 190, "burst": 20, "max_attempts": 4, "base_delay_s": 0.5},
+            "alpaca_trading": {"per_minute": 190, "burst": 10, "max_attempts": 3, "base_delay_s": 0.5},
+            "openrouter": {"per_minute": 30, "burst": 5, "max_attempts": 3, "base_delay_s": 2.0},
+            "ollama": {"per_minute": 600, "burst": 30, "max_attempts": 2, "base_delay_s": 1.0},
+            "finnhub": {"per_minute": 55, "burst": 10, "max_attempts": 3, "base_delay_s": 1.0},
+            "yahoo": {"per_minute": 60, "burst": 10, "max_attempts": 3, "base_delay_s": 1.0},
+            "reddit": {"per_minute": 55, "burst": 10, "max_attempts": 3, "base_delay_s": 1.0},
+            "fmp": {"per_minute": 55, "burst": 10, "max_attempts": 3, "base_delay_s": 1.0},
+            "telegram": {"per_minute": 20, "burst": 5, "max_attempts": 3, "base_delay_s": 1.0},
+            "supabase": {"per_minute": 600, "burst": 60, "max_attempts": 3, "base_delay_s": 0.3},
+        },
+        "description": (
+            "Phase 8: how hard the engine is allowed to push each provider, and how often it retries "
+            "(`app/ops/resilience.py`). A token bucket spaces our own calls so the free plans' limits are "
+            "mostly never reached — Alpaca's is 200/min, Finnhub's 60/min. Retries use exponential backoff "
+            "with FULL jitter because every job in this system fires from the same cron minute, and "
+            "synchronised retries are how a small outage becomes a 429 storm. Only READS are retried: an "
+            "order submission is never auto-retried, since a broker timeout cannot be distinguished from a "
+            "silent success and a retry risks a duplicate position."
+        ),
+    },
+    "paper_month": {
+        "value": {
+            "started_on": None,
+            "min_weeks": 4,
+            "min_trades": 20,
+            "note": "Plan §17 criterion 2. POST /ops/paper-month/start stamps day zero.",
+        },
+        "description": (
+            "Phase 8's calendar gate: four CONSECUTIVE weeks of the full pipeline on paper, at least 20 "
+            "journaled trades, autopsies generated and zero unacknowledged execution failures. Restarting "
+            "resets the clock on purpose — an outage that breaks the run has to be visible as a restart "
+            "rather than averaged away. `/ops/acceptance` measures it; nothing here can grant permission "
+            "to trade live, which stays refused in code."
+        ),
+    },
+    "monitor_heartbeat": {
+        "value": {"at": None, "watching": 0, "refresh_seconds": 30, "error": None},
+        "description": (
+            "Written by the synthetic stop container on every watch-list refresh. Before Phase 8 a monitor "
+            "that had silently died looked exactly like a monitor with nothing to do — and pre-market it is "
+            "the only thing protecting a position, because Alpaca accepts a pre-market stop and never "
+            "triggers it (docs/BROKER_RULES.md R1)."
+        ),
+    },
+    "go_live_checklist": {
+        "value": {"funded": False, "w8ben": False, "first_strategy": False, "accountant": False},
+        "description": (
+            "Plan §17 criterion 5 — the steps only the owner can take: fund modestly, file the W-8BEN, "
+            "choose ONE small first live config, confirm the tax treatment with an accountant. The engine "
+            "never ticks these off, and the go-live scorecard reports them as the owner's permanently."
+        ),
+    },
+    "backup": {
+        "value": {
+            "tables": ["app_settings", "strategy_configs", "frameworks", "prompt_templates", "plugin_registry",
+                       "scans", "signals", "orders", "journal", "news_sentiment", "backtests",
+                       "guardian_ledger", "compliance_events", "hypotheses", "economic_events",
+                       "premarket_volume_baseline", "feed_calibration", "symbol_stats", "briefings"],
+            "keep_daily": 14,
+            "keep_weekly": 8,
+            "path": "data/backups",
+            "include_parquet_manifest": True,
+        },
+        "description": (
+            "Phase 8 backup/restore. `scripts/backup.py` writes one JSONL file per table plus a manifest "
+            "with row counts and a checksum; `scripts/restore.py` reads it back and refuses to run without "
+            "--yes. The parquet bar cache is NOT copied — it is 18 MB of re-downloadable history — but its "
+            "manifest is, so a restore can tell what was cached and re-fetch it. Keep the backup directory "
+            "out of git: it contains real account data."
+        ),
     },
 }

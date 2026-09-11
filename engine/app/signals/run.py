@@ -22,6 +22,7 @@ from app.marketdata import alpaca
 from app.marketdata import repo as md_repo
 from app.models import WatchlistUniverse
 from app.notify import send_telegram
+from app.ops import preflight as ops_preflight
 from app.scanner import run as scan_run
 from app.signals import briefing as briefing_mod
 from app.signals import context as ctx
@@ -135,6 +136,20 @@ def run_signals(*, now: dt.datetime | None = None, date: dt.date | None = None,
     if cap is not None:
         cfg["candidates_per_strategy"] = cap
     res = SignalsResult(trade_date=day.isoformat(), as_of=now.strftime("%H:%M"))
+
+    # Plan §33, checked before a single token is spent: a plan written on a stale price is a plan for a
+    # market that has moved on, and it would look exactly like a good one. The reference is SPY on IEX —
+    # a symbol that always trades, on the only feed the free plan serves in real time.
+    try:
+        ops_preflight.assert_data_fresh(now=now)
+    except ops_preflight.PreflightBlocked as e:
+        res.errors.append(f"data feed: {e}")
+        res.notes.append("no plans were generated — §33 refuses to plan on stale prices")
+        res.elapsed_s = round(time.time() - t0, 1)
+        if notify:
+            send_telegram(f"🧠 Plans {day.isoformat()}: ABORTED — the price feed is stale ({e}). "
+                          f"No plans were written; none were guessed.")
+        return res
 
     ready, detail = openrouter.available()
     if not ready:

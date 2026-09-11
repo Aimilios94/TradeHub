@@ -284,13 +284,21 @@ class ScanResult:
     rows_written: int = 0
     errors: list[str] = field(default_factory=list)
     elapsed_s: float = 0.0
+    complete: bool = True                       # plan §33: a partial scan is never presented as a full one
+    incomplete_reason: str = ""
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "scan_date": self.scan_date, "as_of": self.as_of, "strategies": self.strategies,
-                "rows_written": self.rows_written, "errors": self.errors, "elapsed_s": self.elapsed_s}
+                "rows_written": self.rows_written, "errors": self.errors, "elapsed_s": self.elapsed_s,
+                "complete": self.complete, "incomplete_reason": self.incomplete_reason}
 
     def summary(self) -> str:
         lines = [f"{'🌅' if self.kind == 'morning' else '🕦'} Scan {self.kind} {self.scan_date} @ {self.as_of} ET"]
+        if not self.complete:
+            # §33: the notice comes FIRST. "3 candidates" under a broken feed reads as a quiet market
+            # unless the reader is told the scan did not finish.
+            lines.append(f"⚠️ PIPELINE INCOMPLETE — {self.incomplete_reason}. "
+                         f"Treat anything below as a partial view, not as today's market.")
         for s in self.strategies:
             top = ", ".join(f"{t['symbol']} ({t.get('gap_pct') if t.get('gap_pct') is not None else '?'}% · rv {t.get('relvol') if t.get('relvol') is not None else '?'})"
                             for t in s.get("top", [])[:5])
@@ -298,6 +306,18 @@ class ScanResult:
         if self.errors:
             lines.append(f"⚠️ {len(self.errors)} error(s): {self.errors[0][:120]}")
         return "\n".join(lines)
+
+
+def mark_incomplete(res: ScanResult, stage: str, reason: str, *, expected: int = 0, produced: int = 0,
+                    notify: bool = True) -> ScanResult:
+    """Plan §33: stop, say so, and log it — never hand back a half-scan that looks whole."""
+    from app.ops import preflight as ops_preflight
+
+    res.complete = False
+    res.incomplete_reason = f"{stage}: {reason}"
+    ops_preflight.pipeline_incomplete(f"scan_{res.kind}:{stage}", expected=expected or 1,
+                                      produced=produced, errors=res.errors or [reason], notify=notify)
+    return res
 
 
 def _write_scans(rows: list[dict]) -> int:
@@ -330,7 +350,8 @@ def run_morning(*, now: dt.datetime | None = None, statuses: tuple[str, ...] = S
                       and (not strategy_codes or c.code in strategy_codes)]
     except Exception as e:  # noqa: BLE001
         res.errors.append(f"strategies: {type(e).__name__}: {str(e)[:160]}")
-        return res
+        return mark_incomplete(res, "strategies", f"the strategy configs could not be read ({str(e)[:100]})",
+                               notify=notify)
     if not strategies:
         res.errors.append("no scannable strategies in statuses " + ",".join(statuses))
         return res
@@ -352,7 +373,8 @@ def run_morning(*, now: dt.datetime | None = None, statuses: tuple[str, ...] = S
             all_stats.update(stage[cfg.code][0])
     except Exception as e:  # noqa: BLE001
         res.errors.append(f"symbol_stats: {type(e).__name__}: {str(e)[:160]}")
-        return res
+        return mark_incomplete(res, "symbol_stats", f"the universe could not be built ({str(e)[:100]})",
+                               notify=notify)
     union = sorted(all_stats)
     if len(union) > max_candidates:
         # keep the most liquid; the rest cannot realistically pass a gap+volume screen anyway
@@ -363,7 +385,8 @@ def run_morning(*, now: dt.datetime | None = None, statuses: tuple[str, ...] = S
         pm = premarket_frames(union, day, now, feed)
     except Exception as e:  # noqa: BLE001
         res.errors.append(f"premarket bars: {type(e).__name__}: {str(e)[:160]}")
-        return res
+        return mark_incomplete(res, "premarket_bars", f"pre-market bars are missing ({str(e)[:100]})",
+                               expected=len(union), notify=notify)
     as_of_t = min(now.time(), PREMARKET_END)
     if feed == "sip" and pm:
         latest = max(df.index[-1] for df in pm.values())
@@ -447,6 +470,9 @@ def run_morning(*, now: dt.datetime | None = None, statuses: tuple[str, ...] = S
     else:
         res.rows_written = len(rows)
     res.elapsed_s = round(time.time() - t0, 1)
+    if res.errors and res.complete:
+        mark_incomplete(res, "partial", f"{len(res.errors)} error(s) during the run, first: {res.errors[0][:120]}",
+                        expected=len(union), produced=len(rows), notify=False)
     if notify:
         send_telegram(res.summary())
     return res

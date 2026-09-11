@@ -94,8 +94,10 @@ def effective_limits(risk: dict, defaults: dict) -> dict:
 
 # ---------- individual checks ----------
 
-def check_kill_switch() -> Check:
-    engaged = kill_switch_engaged()
+def check_kill_switch(engaged: bool | None = None) -> Check:
+    """`engaged` is injectable so Phase 8's drill can force the red branch without flipping the real
+    switch (plan §17 criterion 3: every check must be proven capable of blocking). None = read the DB."""
+    engaged = kill_switch_engaged() if engaged is None else engaged
     return Check("kill_switch", RED if engaged else GREEN,
                  "ENGAGED — no orders may be placed" if engaged else "not engaged")
 
@@ -176,8 +178,10 @@ def realized_r_today(day: dt.date) -> tuple[float | None, str]:
     return round(total, 3), f"{len(rows)} closed trade(s) today"
 
 
-def check_daily_loss_limit(day: dt.date, limit_r: float | None) -> Check:
-    value, note = realized_r_today(day)
+def check_daily_loss_limit(day: dt.date, limit_r: float | None,
+                           realized: tuple[float | None, str] | None = None) -> Check:
+    """`realized` is injectable for the Phase 8 drill; None = read today's R from the journal."""
+    value, note = realized if realized is not None else realized_r_today(day)
     if value is None:
         return Check("daily_loss_limit", YELLOW, note)
     if limit_r is None:
@@ -188,14 +192,18 @@ def check_daily_loss_limit(day: dt.date, limit_r: float | None) -> Check:
     return Check("daily_loss_limit", GREEN, f"{value:+.2f}R today, limit -{abs(limit_r)}R ({note})")
 
 
-def check_wash_trade(symbol: str, side: str, enabled: bool) -> Check:
-    """Plan §12 rule 7: refuse if a conflicting own resting order exists."""
+def check_wash_trade(symbol: str, side: str, enabled: bool, resting: list[dict] | None = None) -> Check:
+    """Plan §12 rule 7: refuse if a conflicting own resting order exists.
+
+    `resting` is injectable so the Phase 8 drill can prove the red branch fires without placing a real
+    opposing order. None = read the live open orders from the broker.
+    """
     if not enabled:
         return Check("wash_trade", GREEN, "guard disabled in settings")
     try:
         from app.broker import orders as broker_orders
 
-        resting = broker_orders.open_orders(symbol)
+        resting = broker_orders.open_orders(symbol) if resting is None else resting
     except Exception as e:  # noqa: BLE001
         return Check("wash_trade", YELLOW, f"could not read open orders: {str(e)[:100]}")
     opposite = [o for o in resting if o["side"] != side]

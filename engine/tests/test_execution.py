@@ -21,6 +21,7 @@ from app.guardian import gate as guardian
 from app.main import app
 from app.marketdata.alpaca import ET
 from app.monitor import synthetic_stop as monitor
+from app.ops import preflight as ops_preflight
 
 client = TestClient(app)
 AUTH = {"Authorization": f"Bearer {get_settings().engine_api_token}"}
@@ -236,6 +237,16 @@ def _signal(**over) -> dict:
             "status": "proposed", "evidence": {}} | over
 
 
+def _preflight_ok(monkeypatch):
+    """Phase 8 put the §33 failure policy in front of the Guardian gate. These tests are about the gate,
+    so the policy is satisfied explicitly — never implicitly, or a green here would only mean the
+    preflight happened to pass."""
+    ok = ops_preflight.Preflight(checks=[ops_preflight.Check("test", ops_preflight.GREEN, "stubbed")],
+                                 computed_at="2026-09-11T09:00:00-04:00")
+    monkeypatch.setattr(deploy_mod.ops_preflight, "assert_can_enter", lambda **kw: ok)
+    return ok
+
+
 def test_deploy_refuses_a_signal_that_is_not_proposed(monkeypatch):
     monkeypatch.setattr(deploy_mod, "load_signal", lambda sid: _signal(status="approved"))
     with pytest.raises(deploy_mod.DeployRefused) as e:
@@ -244,6 +255,7 @@ def test_deploy_refuses_a_signal_that_is_not_proposed(monkeypatch):
 
 
 def test_deploy_blocks_on_a_red_gate_and_submits_nothing(monkeypatch):
+    _preflight_ok(monkeypatch)
     monkeypatch.setattr(deploy_mod, "load_signal", lambda sid: _signal())
     monkeypatch.setattr(deploy_mod, "strategy_risk", lambda sid: (RISK, "S1"))
     monkeypatch.setattr(deploy_mod.broker_account, "snapshot", lambda: ACCT)
@@ -265,6 +277,7 @@ def test_deploy_blocks_on_a_red_gate_and_submits_nothing(monkeypatch):
 
 
 def test_deploy_dry_run_passes_the_gate_but_submits_nothing(monkeypatch):
+    _preflight_ok(monkeypatch)
     monkeypatch.setattr(deploy_mod, "load_signal", lambda sid: _signal())
     monkeypatch.setattr(deploy_mod, "strategy_risk", lambda sid: (RISK, "S1"))
     monkeypatch.setattr(deploy_mod.broker_account, "snapshot", lambda: ACCT)
@@ -277,6 +290,7 @@ def test_deploy_dry_run_passes_the_gate_but_submits_nothing(monkeypatch):
 
 
 def test_deploy_records_a_broker_refusal_rather_than_retrying(monkeypatch):
+    _preflight_ok(monkeypatch)
     monkeypatch.setattr(deploy_mod, "load_signal", lambda sid: _signal())
     monkeypatch.setattr(deploy_mod, "strategy_risk", lambda sid: (RISK, "S1"))
     monkeypatch.setattr(deploy_mod.broker_account, "snapshot", lambda: ACCT)
@@ -293,6 +307,35 @@ def test_deploy_records_a_broker_refusal_rather_than_retrying(monkeypatch):
     assert res.submitted is False and "market is closed" in res.reason
     assert marks[0][0] == "rejected" and events[0]["kind"] == "failure"
 
+
+def test_deploy_is_refused_by_the_failure_policy_before_the_guardian_runs(monkeypatch):
+    """Plan §33: a stale feed or an unreachable broker stops the order, and the Guardian never runs.
+
+    Ordering is the point. The Guardian asks whether THIS order is sane; it has no way to notice that
+    the price it is reasoning about is four minutes old.
+    """
+    monkeypatch.setattr(deploy_mod, "load_signal", lambda sid: _signal())
+    stale = ops_preflight.Preflight(
+        checks=[ops_preflight.Check("data_feed", ops_preflight.RED, "AAPL quote is 412s old (limit 60s)")],
+        computed_at="2026-09-11T09:00:00-04:00")
+
+    def blocked(**kw):
+        raise ops_preflight.PreflightBlocked(stale.reason(), stale)
+
+    monkeypatch.setattr(deploy_mod.ops_preflight, "assert_can_enter", blocked)
+    monkeypatch.setattr(deploy_mod.guardian, "evaluate",
+                        lambda **kw: pytest.fail("the Guardian must not run once the policy has blocked"))
+    monkeypatch.setattr(deploy_mod.broker_orders, "submit",
+                        lambda **kw: pytest.fail("a blocked preflight must never reach the broker"))
+    marks, sent = [], []
+    monkeypatch.setattr(deploy_mod, "mark_signal", lambda sid, st, r=None: marks.append((st, r)))
+    monkeypatch.setattr(deploy_mod, "send_telegram", lambda t: sent.append(t) or True)
+
+    res = deploy_mod.deploy("sig-1", notify=True)
+    assert res.submitted is False and "412s old" in res.reason
+    assert res.preflight["can_enter"] is False
+    assert marks and marks[0][0] == "rejected"
+    assert sent and "BLOCKED" in sent[0]
 
 # ---------- Telegram approval ----------
 

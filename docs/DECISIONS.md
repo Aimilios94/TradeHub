@@ -379,3 +379,116 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     re-downloaded history the owner had already paid for. Relative paths in `.env` now anchor to the
     repo root (`Settings._anchor_to_repo`), the compose mount moved to `./data:/srv/data` to match, and
     the stray `engine/data/` cache was moved into place.
+
+## 2026-09-11 — Phase 8
+
+79. **Only reads are retried; an order submission never is.** `app/ops/resilience.py` paces and retries
+    every call that leaves this machine — bars, quotes, news, both model tiers, Telegram — with
+    exponential backoff and FULL jitter, because every job in this system fires from the same cron
+    minute and synchronised retries are how a small outage becomes a 429 storm. `broker.orders.submit`
+    is deliberately outside it: a timeout cannot be distinguished from "the broker filled it and the
+    reply was lost", so a retry risks buying the position twice. The truth is recovered by
+    `/execute/orders/sync`, not guessed. `resilience.guard_write` exists to make that refusal explicit
+    rather than an omission somebody later "fixes", and a test reads the source of `submit` to prove no
+    retry wrapper has appeared around it.
+80. **A permanent failure is raised at once, not after three attempts.** `is_transient` is the whole
+    retry policy: 408/425/429/5xx and transport errors get another attempt; 400/401/403/404 do not.
+    Retrying a wrong key burns the rate limit and delays the Telegram alert that says what is actually
+    wrong. When a provider sends `Retry-After`, that number wins over our guess.
+    `call_preserving_error` re-raises the provider's own exception after the last attempt, so
+    `openrouter.py` still reports "credit exhausted" rather than a generic retry failure.
+81. **Plan §33 is now code, not a promise in a document.** `app/ops/preflight.py` turns each clause into
+    a named check with a consequence, and the deploy path runs it BEFORE the Guardian gate. The ordering
+    is the point: the Guardian asks whether this order is sane, and has no way to notice that the price
+    it is reasoning about is four minutes old. `unknown` blocks exactly as `red` does — "we could not
+    reach the broker, assume it is fine" is the failure §33 was written against. Blocking is asymmetric:
+    a red stops a new ENTRY, never an exit, a reconciliation or the synthetic stop. Refusing to close a
+    position because a data feed is unhappy would be the engine hurting the owner to protect itself.
+82. **Staleness is measured on IEX, and only while the tape is moving.** The free plan delays SIP by
+    ~15 minutes BY SUBSCRIPTION, so measuring freshness against it would flag a healthy feed every
+    single day. Outside 04:00–20:00 ET the check returns `not_applicable` with its reason rather than a
+    red that fires every night — a check that cries wolf nightly is one the owner learns to ignore,
+    which is worse than not having it. Found while writing the tests: `test_signals` had a case that
+    silently depended on the market being open, and it failed the first time it ran after the close.
+83. **The synthetic stop monitor now says "I am alive".** It writes `app_settings.monitor_heartbeat` on
+    every watch-list refresh. Before this, a monitor that had silently died looked exactly like a
+    monitor with nothing to do — and pre-market it is the ONLY protection a position has, because
+    Alpaca accepts a pre-market stop and never triggers it (`docs/BROKER_RULES.md` R1). A silent
+    heartbeat is yellow in general and RED during pre-market.
+84. **One failure recorder, and it separates the row from the ping.** `app/ops/failures.py` writes a
+    `compliance_events` row EVERY time and deduplicates only the Telegram alert, per `(kind, key)` for
+    `alert_cooldown_minutes`. A broken feed fails on every symbol in the loop; suppressing the row
+    instead of the notification would be hiding the failure, and the count of rows is what lets the
+    weekly review see a problem that has been recurring quietly for a fortnight. Criterion 2's "zero
+    unhandled execution errors" is only measurable because failures are rows rather than log lines.
+85. **A partial scan announces itself first.** `ScanResult.complete` is false whenever the run hit an
+    error, and the Telegram summary now LEADS with "PIPELINE INCOMPLETE — treat anything below as a
+    partial view, not as today's market". "3 candidates" under a broken feed reads exactly like a quiet
+    market unless the reader is told the scan did not finish. The signals run refuses outright on a
+    stale feed: no plans are written, and none are guessed.
+86. **The Guardian fire drill (§17 criterion 3).** `POST /ops/drill` forces each of the ten Layer-1
+    checks to block, once, with fabricated inputs — no order is submitted, no setting is flipped — and
+    files the result in `compliance_events` so the scorecard can cite a date instead of a promise. A
+    check that has never blocked anything is a check nobody has evidence for, and a typo turning one
+    into a permanent green looks exactly like a healthy market. Three gate checks gained an optional
+    injected argument (`check_kill_switch(engaged=)`, `check_daily_loss_limit(realized=)`,
+    `check_wash_trade(resting=)`) so their red branch can be proven without a real opposing order or a
+    real loss. The kill switch also has an opt-in LIVE mode that engages it, verifies the block and
+    releases it in a `finally`; a failed release escalates, because a stuck kill switch halts trading.
+    **First run, 2026-09-11: 10 of 10 proven, live kill switch included.**
+87. **A test reads `gate.evaluate` to catch a check with no drill scenario.** `drill.CHECK_FUNCTIONS`
+    maps each gate function to the `Check.name` it returns, and a test parses the gate's own source to
+    assert nothing is missing from it. Adding an eleventh check without a drill for it would otherwise
+    produce a permanent green nobody noticed — the same shape of bug as #63.
+88. **The go-live scorecard is measured, never remembered.** `/ops/acceptance` answers §17's five
+    criteria from the database: backtests recorded, consecutive weeks of paper operation, closed trades,
+    autopsies, unacknowledged failures, the drill, the ledger reconciliation, the two latencies. The
+    risk with a four-week criterion is not that it fails — it is that four weeks pass, the run is
+    remembered as "mostly working", and the memory becomes the evidence. Criterion 5 (funding, W-8BEN,
+    the first small live config, an accountant) is marked `owner` permanently and can never be satisfied
+    by the engine, so `ready_for_live` cannot come back true on the engine's own say-so. Live trading
+    stays refused in code regardless (#37).
+89. **Weeks are seven-day blocks from day zero, not calendar weeks.** A Wednesday start would otherwise
+    get a two-day first "week" that can never be complete. A week counts as complete with scans on at
+    least 4 of its days, which allows one market holiday. Restarting the paper month resets the clock on
+    purpose: §17 asks for four CONSECUTIVE weeks, so an outage that breaks the run has to be visible as
+    a restart rather than averaged away.
+90. **"Nothing went wrong" is not a measurement.** Criterion 4 needs real samples, so the deploy path
+    now stores `deploy_latency_ms` on the order row and the monitor stores `reaction_ms` on its
+    `compliance_events` row. With no samples the criterion is `unknown`, never met — and a synthetic
+    stop that never fired is reported "unverified", because the absence of an emergency says nothing
+    about the speed of the safety net. A deploy over the 2,000 ms budget records the breach when it
+    happens rather than letting it be averaged away later.
+91. **Reconciliation on a paper account means labelled, not charged.** §17 asks the ledger to reconcile
+    against Alpaca activities to the cent, but a paper account is never charged SEC/TAF (#46). So the
+    honest test is: every fee row is either backed by a real `alpaca_activity_id` or explicitly marked
+    `estimated`. A fee row that is neither is an invented charge, and that is what fails the criterion.
+92. **Backup lives in the engine; the restore does not.** `app/ops/backup.py` + `POST /ops/backup` (n8n
+    workflow 11, nightly 23:30 ET) writes one JSONL file per table with a SHA-256 each, plus a manifest
+    and an index of the parquet cache. Rows are read in PAGES — PostgREST caps a response at 1,000, so
+    a `journal` past that would have been backed up silently truncated, which is the worst kind of
+    backup because it looks fine. `.env` is never included: it holds every key, and a backup folder is
+    the easiest thing in the world to copy somewhere careless. The parquet bars are indexed, not copied
+    — 18 MB of history Alpaca hands back for free. Restoring is CLI only (`scripts/restore.py`), is a
+    dry run unless `--yes`, verifies each checksum before loading anything, upserts on each table's REAL
+    primary key rather than assuming `id` (six tables are keyed on `key`, `name`, `code`, `symbol` or a
+    composite), and never truncates — wiping first would turn "I restored yesterday's journal" into "I
+    deleted today's". **Verified 2026-09-11: 65,929 rows across 19 tables, 18.2 MB, 866 parquet files
+    indexed, restore dry run clean.**
+93. **The onboarding wizard will not offer live mode.** `scripts/onboarding.py` walks keys, paper/live,
+    risk defaults, active strategies and a connectivity self-test; it is re-runnable, keeps a
+    timestamped `.env` copy before writing, rewrites only the lines that changed, and never echoes a
+    secret. The paper/live step exists to explain that live is refused in code, not to offer a switch —
+    a setup wizard is exactly the wrong place for that decision. It also refuses to demote a strategy
+    that has reached `paper` or `live`.
+94. **The scorecard found two things on its first run.** (a) S3 (Opening-Range Break) had never been
+    backtested: six of the seven backtestable strategies had a recorded run and nobody had noticed the
+    seventh was missing, because no query was asking. Now run — 156 trades, verdict **fail**, expectancy
+    −10.29 per trade after costs, profit factor 0.795, max drawdown 10.4% — which makes it the sixth of
+    the seven to fail on this window, and criterion 1 asks only that the measurement exists, not that it
+    flatters. (b) `Coverage` declared `symbol_days_screened` and `symbol_days_passed` and NOTHING ever
+    incremented them, so every backtest recorded 0 symbol-days beside a funnel saying 156 trades
+    happened. A field that always answers zero is worse than an absent one: a reader either distrusts
+    the whole row or believes it. Both counters now come from the funnel, and a test asserts every
+    `symbol_days*` field on `Coverage` is written somewhere. **The Phase 7 rows recorded before this fix
+    still carry 0 — read their `diagnostics.funnel` instead, which was always right.**

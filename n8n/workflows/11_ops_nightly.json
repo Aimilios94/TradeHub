@@ -1,0 +1,227 @@
+{
+  "name": "11 Ops nightly backup + weekly scorecard",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 23 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000001",
+      "name": "Every night 23:30 ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -120
+      ],
+      "notes": "After the 23:00 pre-market baseline job (workflow 01), so the night's writes are included in the backup rather than missed by half an hour."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/ops/backup",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "false"
+            },
+            {
+              "name": "prune",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 900000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000002",
+      "name": "POST /ops/backup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        -120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "One JSONL file per table into data/backups/<stamp>, plus a manifest with a SHA-256 per file and an index of the parquet cache. notify=false because a successful backup every night is noise; an INCOMPLETE one alerts on its own from inside the engine, which is the case worth hearing about. Keeps the newest app_settings.backup.keep_daily folders and deletes the rest. The .env file is never included — it holds the API keys."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 18 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000003",
+      "name": "Sunday 18:00 ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        120
+      ],
+      "notes": "After the Sunday weekly review (workflow 07, 09:00) and its backtest queue (workflow 10, 11:00), so the scorecard reads a week that has finished being written."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://engine:8000/ops/acceptance",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000004",
+      "name": "GET /ops/acceptance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "The plan §17 gate to real money, MEASURED: backtests recorded, consecutive weeks of paper operation, closed trades, autopsies, unacknowledged failures, the Guardian drill, the ledger reconciliation and the deploy/stop latencies. Sends the plain-language summary to Telegram every Sunday so four weeks cannot pass on the strength of remembering that it 'mostly worked'. It grants nothing: live trading stays refused in app/broker/orders.assert_paper_only until a separate, owner-approved commit lifts it."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/ops/drill",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "notify",
+              "value": "false"
+            },
+            {
+              "name": "store",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0011-4000-8000-000000000005",
+      "name": "POST /ops/drill",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Forces each of the ten Guardian checks to block, once, with fabricated inputs — no order is submitted and no setting is flipped. Runs AFTER the scorecard so Sunday's report describes last week's drill and this one lands in time for next week's. A check that has never blocked anything is a check nobody has evidence for; a drill that comes back incomplete alerts by itself."
+    }
+  ],
+  "connections": {
+    "Every night 23:30 ET": {
+      "main": [
+        [
+          {
+            "node": "POST /ops/backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sunday 18:00 ET": {
+      "main": [
+        [
+          {
+            "node": "GET /ops/acceptance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /ops/acceptance": {
+      "main": [
+        [
+          {
+            "node": "POST /ops/drill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-8"
+    }
+  ]
+}

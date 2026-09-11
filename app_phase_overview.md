@@ -6,7 +6,8 @@ Plain-language status. What each phase does, and whether it's built.
 Everything else is free — Alpaca, Supabase, Finnhub, Yahoo, Telegram, and the small AI on your own GPU.
 
 **Orders are possible now, but only when you tap Deploy** — and only on the paper account.
-Live trading is blocked in the code itself until Phase 8.
+Live trading is blocked in the code itself, and stays blocked until the paper month is done and you
+approve a separate change that lifts it.
 
 ---
 
@@ -83,7 +84,7 @@ automatically, and the rest waits for a backtest (Phase 7) and your approval.
   orders"). On the 1st of each month it checks whether the broker's own pages changed and tells you which
   rule to re-read. It flags; you decide. It found two dead links the first time it ran.
 
-## ✅ Phase 7 — Backtest engine  ← you are here, just finished
+## ✅ Phase 7 — Backtest engine
 Replay any strategy over past data and find out whether it actually works — *before* risking money.
 
 - **All 32 indicators and exits are now built.** VWAP, EMAs, RSI, the four Kurisko stochastic bands
@@ -121,13 +122,14 @@ data provider refuse a whole batch of 100 — costing 99 good stocks their histo
 
 | Strategy | Trades | Win rate | Verdict |
 |---|---|---|---|
+| S3 Opening Range Break | 156 | — | **fail** (measured 11 Sept, see Phase 8) |
 | S4 HPS Quad Divergence | 150 | 34% | **fail** |
 | S5 20/20 Bull Flag | 45 | 9% | not enough trades to say |
 | S6 Bear Flag (PDF) | 54 | 11% | not enough trades to say |
 | S7 Bear Flag (variant) | 215 | 16% | **fail** |
 | S8 Swing Divergence | 82 | 38% | **fail** |
 
-All five lose money after costs, against the PDF's claimed ~95% win rates. **Read this carefully
+All of them lose money after costs, against the PDF's claimed ~95% win rates. **Read this carefully
 before concluding anything:** it is one six-month window of one market, and the entry prices come from
 the backtester's own simple rules, not from the trade plans the AI writes live. It is not proof these
 strategies are bad — it is proof that none of them may be promoted yet, which is what the gate is for.
@@ -139,8 +141,76 @@ times as much in total because it takes four times as many trades. Neither wins.
 out of time. The target was never reached once, so changing it changes nothing. The stop needs
 attention first.
 
-## ⬜ Phase 8 — Hardening + paper month *(next)*
-At least 4 weeks of paper trading. Nothing goes live before this.
+## ✅ Phase 8 (part 1) — Hardening  ← you are here
+The engine now behaves properly when something **outside** it breaks, and it measures whether it is
+allowed to go live instead of asking you to remember.
+
+- **It retries what is safe to retry, and nothing else.** Every call that leaves your PC — prices, news,
+  the AI, Telegram — is spaced out so you never hit a free-plan limit, and retried if the other side is
+  briefly down. **Placing an order is never retried.** If the broker times out, nobody at this end can
+  tell "it never arrived" from "it filled and the reply got lost", and guessing would buy the position
+  twice. It stops, tells you, and the truth comes from re-checking with the broker.
+- **A wrong key fails immediately** instead of being retried three times, so the alert reaches you fast
+  and says what is actually wrong.
+- **The safety rules are now code that runs, not a paragraph in the plan.** Before any order:
+  is the broker reachable, is the database up, is the kill switch off, is the price actually fresh, is
+  the pre-market stop watcher alive? Anything unknown **blocks** — "we couldn't check, assume it's fine"
+  is exactly the mistake this exists to prevent. It only ever blocks *opening* a position: closing one
+  is never blocked.
+- **It will not plan or trade on a stale price.** If the feed goes quiet during the session, the 08:00
+  run writes **no plans at all** rather than plans built on a price that has moved on — and it says so
+  before spending a cent on the AI. Outside market hours it knows an old quote is normal and stays quiet.
+- **The pre-market stop watcher now reports in every 30 seconds.** Before, a watcher that had silently
+  died looked exactly like a watcher with nothing to do. Pre-market it is the *only* thing protecting a
+  position, so silence is now an alarm.
+- **One alert, not four hundred.** A broken feed fails on every symbol. Every failure is still recorded
+  — the count is the evidence — but the phone buzzes once per problem per half hour.
+- **A half-finished scan says so first.** The message now starts with "PIPELINE INCOMPLETE — treat this
+  as a partial view, not as today's market". "3 candidates" from a broken scan reads exactly like a
+  quiet morning otherwise.
+- **Nightly backup, and a restore that cannot make things worse.** Every table is copied to your PC at
+  23:30 with a checksum per file (65,929 rows, 18 MB the first time). Restoring is a separate command
+  that does a dry run first, checks every checksum before loading anything, and **adds back what is
+  missing without deleting what is newer**. Your `.env` keys are deliberately *not* in the backup —
+  keep your own copy where you keep passwords.
+- **A setup walkthrough** (`scripts/onboarding.py`): keys, risk limits, which strategies get scanned,
+  then a connectivity test that sends you a real Telegram message. Re-runnable, never prints a key, and
+  it will not offer to switch you to live — that is still refused in the code itself.
+
+### The fire drill — 10 of 10
+The Guardian has ten checks that stand between a signal and an order. A typo in any one turns it into a
+permanent green, **and a permanent green looks exactly like a healthy market**. So there is now a drill
+that forces each check to block, one at a time, with made-up inputs — no order is ever sent. First run
+(11 Sept): all ten blocked correctly, including a live test that engaged the real kill switch, confirmed
+nothing could trade, and released it again. It runs itself every Sunday.
+
+### The go-live scorecard
+`/ops/acceptance` answers the five conditions for real money by **querying the database**, not by asking
+you what you remember. You also get it in plain English on Telegram every Sunday.
+
+| | Condition | Where it stands |
+|---|---|---|
+| 1 | Every strategy backtested | ✅ **met** — 7 of 7 (S2 is excused: a watchlist briefing has no entry or stop to replay) |
+| 2 | 4 straight weeks of paper trading, 20+ trades | ⬜ not started — one command begins the clock |
+| 3 | Guardian proven, ledger reconciles, tax provision running | ✅ **met** |
+| 4 | Deploy under 2 seconds, stop reaction under 1 second | ❓ unknown — it needs real taps to measure |
+| 5 | Funding, W-8BEN, first small strategy, your accountant | 🙋 **yours** — the engine can never tick these |
+
+Condition 4 says **unknown**, not "fine". A stop that never had to fire tells you nothing about how fast
+it reacts, so it stays unverified until it fires once.
+
+**Two things the scorecard caught the first time it ran:**
+1. **S3 had never been backtested.** Six of seven strategies had a recorded run and nobody had noticed
+   the seventh was missing, because nothing was asking. Now run: 156 trades, **fail**, losing $10.29 per
+   trade after costs. That makes six of the seven measured strategies unprofitable on this window — the
+   condition asks only that the measurement exists, not that it flatters.
+2. **Two numbers in every backtest report were always zero** — "symbol-days screened" and "symbol-days
+   passed" were being displayed but never counted. Fixed. Backtests recorded before today still show 0
+   there; the funnel figures next to them were always correct.
+
+## ⬜ Phase 8 (part 2) — The paper month *(you start this)*
+Four straight weeks of the whole thing running daily on paper. Nothing about the code is waiting on you;
+this is calendar time and at least 20 journaled trades. Say the word and I will start the clock.
 
 ## ⬜ Phase 9 — User interface
 The dashboard. Deliberately last, after the engine has proven itself.
@@ -153,5 +223,9 @@ tidy-ups, as a visual report. It was deliberately saved until the backtester was
 this can run now. `/diagnosing-bugs` is installed too and can be used any time something breaks.
 
 ### Waiting on you
+- **Start the paper month** — say the word and I start the four-week clock. Nothing else is blocking it.
+- **Your own go-live steps**, whenever you get to them: fund the account modestly, file the W-8BEN with
+  Alpaca, pick one small first strategy, and confirm the tax treatment with an accountant. The scorecard
+  tracks these as yours; the engine will never tick them off for you.
 - **Reddit keys** — optional, widens news coverage on small stocks the big outlets ignore.
 - **Finviz Elite** — paid, skipped for now. Only affects exact float numbers.
