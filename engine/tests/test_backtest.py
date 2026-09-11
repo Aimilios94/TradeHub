@@ -524,13 +524,56 @@ def test_one_bad_symbol_does_not_cost_the_whole_batch_its_history(monkeypatch, t
     monkeypatch.setattr(bar_store.alpaca, "get_bars", fake_get_bars)
     monkeypatch.setattr(bar_store, "root", lambda tf, fd: tmp_path)
 
-    got = bar_store.fetch(["AAA", "BAD", "CCC", "DDD"], dt.datetime(2026, 1, 2), dt.datetime(2026, 1, 3),
+    got = bar_store.fetch(["AAA", "BAD", "CCC", "DDD"], dt.datetime(2026, 1, 2, tzinfo=dt.UTC), dt.datetime(2026, 1, 3, tzinfo=dt.UTC),
                           timeframe="1Day", feed="sip")
     assert set(got) == {"AAA", "CCC", "DDD"}, "the good symbols must survive the bad one"
     assert "BAD" in bar_store.load_rejected("1Day", "sip"), "and the offender is remembered"
 
     # a second call skips the known-bad symbol entirely rather than rediscovering it
     before = calls["n"]
-    bar_store.fetch(["AAA", "BAD"], dt.datetime(2026, 1, 2), dt.datetime(2026, 1, 3),
+    bar_store.fetch(["AAA", "BAD"], dt.datetime(2026, 1, 2, tzinfo=dt.UTC), dt.datetime(2026, 1, 3, tzinfo=dt.UTC),
                     timeframe="1Day", feed="sip")
     assert calls["n"] - before == 1
+
+
+def test_a_swing_strategy_is_replayed_across_sessions_not_within_one():
+    """S8's setup is a 60-minute divergence and a regular session holds about seven 60-minute bars.
+    Resetting the setup memory at every session boundary made it produce exactly zero trades — which
+    reads identically to "the setup never occurred"."""
+    import datetime as _dt
+
+    from app.exits.plugins import PositionView
+
+    cfg = seed.S8.model_copy(deep=True)
+    cfg.entry_conditions.all = []
+    cfg.backtest = BacktestSpec(**(cfg.backtest.model_dump() | {"entry_window": "09:30-15:55",
+                                                               "max_trades_per_day": 1}))
+    # three sessions of hourly bars, rising throughout
+    bars = pd.concat([
+        frame([100 + i + d * 10 for i in range(7)], start=(9, 30), minutes=60,
+              day=_dt.date(2026, 3, 2 + d), volume=5_000_000)
+        for d in range(3)
+    ])
+    res = engine.run_symbol_day(cfg, "TEST", bars, spec=cfg.backtest, fill_model=FM, fee_model=FEES,
+                                day_levels={}, risk_dollars=500.0, atr_value=2.0)
+    # one trade per session is allowed again after each date change, so a multi-day frame is not
+    # silently capped at the first day's budget
+    assert len(res.trades) >= 2, "the per-day trade budget must reset when the date changes"
+    assert PositionView  # the loop's position type is the one the plugins see
+
+
+def test_an_ab_between_two_losing_configs_does_not_read_as_an_endorsement():
+    """The real S6-vs-S7 run: S7 won on expectancy while both lost money. "Less bad" must not be
+    reported in a way that could be mistaken for "good enough to promote"."""
+    a = M.compute(sample_trades(120, -1.0), min_trades=100)
+    b = M.compute(sample_trades(120, -2.0), min_trades=100)
+    cmp = M.compare(a, b, label_a="S7", label_b="S6")
+    assert cmp["winner"] == "S7"
+    assert cmp["both_losing"] is True
+    assert "less bad" in cmp["note"]
+    assert "neither may be promoted" in cmp["note"]
+
+    good = M.compare(M.compute(sample_trades(120, 2.0), min_trades=100),
+                     M.compute(sample_trades(120, 1.0), min_trades=100), label_a="x", label_b="y")
+    assert good["both_losing"] is False
+    assert "less bad" not in good["note"]

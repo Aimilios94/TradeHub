@@ -215,6 +215,37 @@ def run_backtest(code: str, date_from: dt.date, date_to: dt.date, *, strategy_id
 
     pm_baselines: dict[str, dict[dt.date, int]] = {}
 
+    # A swing strategy is replayed over a CONTINUOUS frame, not session by session. S8's setup is a
+    # 60-minute divergence and a regular session holds about seven 60-minute bars, so a per-session
+    # replay throws the setup away before the pattern can form — it produced exactly zero trades, which
+    # reads identically to "the setup never occurred". Screener swing strategies would still need the
+    # per-day screen, so the continuous path is taken only for a watchlist universe.
+    if str(cfg.style) == "swing" and not is_screener:
+        frames, intr_stats = bar_store.get(symbols, date_from, date_to, timeframe=spec.bar_timeframe,
+                                           feed=feed, use_cache=use_cache)
+        funnel["sessions"] = len(trading_days)
+        for sym, df in frames.items():
+            if df is None or df.empty:
+                funnel["no_intraday_bars"] += 1
+                continue
+            d = daily.get(sym)
+            last = replay.stats_as_of(d, date_to + dt.timedelta(days=1)) if d is not None else None
+            levels = {"prior_high": (last or {}).get("prev_high"), "prior_low": (last or {}).get("prev_low"),
+                      "prior_close": (last or {}).get("prev_close")}
+            funnel["stage_a"] += 1
+            funnel["screened"] += 1
+            funnel["candidates"] += 1
+            funnel["replayed"] += 1
+            sym_res = engine.run_symbol_day(cfg, sym, df, spec=spec, fill_model=fm, fee_model=fee_model,
+                                            day_levels=levels, risk_dollars=risk_dollars,
+                                            atr_value=(last or {}).get("atr14"))
+            all_trades.extend(sym_res.trades)
+        notes.append("replayed as one continuous frame per symbol, not session by session: a swing "
+                     "setup on 60-minute bars spans sessions. The daily loss limit is therefore not "
+                     "enforced across symbols in this path.")
+        trading_days = []
+        _ = intr_stats
+
     for day in trading_days:
         # stage A: the cheap local filter, on stats computed from bars up to the previous session
         stage_a: list[str] = []

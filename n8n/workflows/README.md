@@ -15,7 +15,8 @@ Planned workflows (one file each, added per phase):
 | `07_weekly_review.json` | cron Sun 09:00 | `POST /review/weekly` (templates 05+06 → `hypotheses`) | 6 ✅ |
 | `08_guardian_briefing.json` | Telegram `/guardian [question]` | `POST /guardian/briefing` | 6.5 ✅ |
 | `09_rules_freshness_monthly.json` | cron 1st 10:00 ET | `POST /guardian/rules-check` | 6.5 ✅ |
-| `10_telegram_alerts.json` | webhook from engine | Telegram | not needed — the engine sends its own alerts directly |
+| `10_backtest_queue_weekly.json` | cron Sun 11:00 ET | `POST /backtest/queue/run` | 7 ✅ |
+| ~~`10_telegram_alerts.json`~~ | webhook from engine | Telegram | never built — the engine sends its own alerts directly (`app/notify.py`), so that number was reused above |
 
 These files are the design source of truth. Deployment state (the workflow `id`, `active`) is not tracked
 here — `n8n/build_import.py` adds a stable id so a re-import updates in place instead of duplicating.

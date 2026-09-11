@@ -205,6 +205,10 @@ def compare(a: dict, b: dict, *, label_a: str, label_b: str) -> dict:
     if ea is not None and eb is not None and ea != eb:
         winner = label_a if ea > eb else label_b
     both_thin = (a.get("trades", 0) < 30) or (b.get("trades", 0) < 30)
+    # "Less bad" is not "better". When neither side makes money the winner is still reported — the A/B
+    # question ("which of these two") has an answer — but the answer must not read as an endorsement,
+    # and neither side can be promoted on it.
+    both_losing = ea is not None and eb is not None and ea <= 0 and eb <= 0
     return {
         "a": label_a, "b": label_b,
         "trades": {label_a: a.get("trades", 0), label_b: b.get("trades", 0)},
@@ -214,9 +218,13 @@ def compare(a: dict, b: dict, *, label_a: str, label_b: str) -> dict:
         "total_pnl": {label_a: g(a, "total_pnl"), label_b: g(b, "total_pnl")},
         "win_rate_pct": {label_a: g(a, "win_rate_pct"), label_b: g(b, "win_rate_pct")},
         "winner": winner,
+        "both_losing": both_losing,
         "confident": bool(winner) and not both_thin,
-        "note": "expectancy after costs decides; win rate is shown but not used. "
-                + ("Both samples are small — this is a hint, not a verdict." if both_thin else ""),
+        "note": ("expectancy after costs decides; win rate is shown but not used. "
+                 + ("Both configurations lose money — the winner is only the less bad of the two and "
+                    "neither may be promoted on this. " if both_losing else "")
+                 + ("Both samples are small — this is a hint, not a verdict. " if both_thin else "")
+                 ).strip(),
     }
 
 

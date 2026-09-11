@@ -318,3 +318,44 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     win rate and negative expectancy, verdict **inconclusive** — 88 is below the 100 the style needs.
     The PDF's claimed ~95% win rate met measured data, which is exactly what §7 said would happen and
     why win rate is never the gate.
+71. **S5, S6 and S7 had S4's disease too, and the cure was measured rather than guessed.** Their
+    embedded-stochastic conditions describe the trend REGIME while the 9-3 rotation is the trigger —
+    and the very bounce that produces the trigger is what breaks the embed. Over 131 sessions of SPY,
+    S6's four hard gates each passed thousands of times and all four coincided on **zero** bars. The
+    window is 12 bars (one hour on 5-min) because that is what the data supports: measured at S6's
+    6,118 trigger bars, the 60-10 had held within 12 bars on 1,190 of them and the 14-3 on 1,815 —
+    frequent enough to be a real setup, rare enough not to be a rubber stamp. S4 keeps 30 bars because
+    its three-stage capitulation → bounce → retest genuinely spans longer. A test now refuses any
+    strategy that pairs a regime gate with its own trigger on the same bar.
+72. **A swing strategy is replayed over a continuous frame, not session by session.** S8's setup is a
+    60-minute divergence and a regular session holds about seven 60-minute bars, so resetting the setup
+    memory at each session boundary produced exactly zero trades — indistinguishable from "the setup
+    never occurred". The loop now resets only the per-day counters (trade budget, re-entry cooldown)
+    when the date changes; setup memory and any open position carry across, which is what a swing hold
+    means. `time_exit` still flattens intraday strategies at their cutoff, so day strategies are
+    unaffected. Multi-day holds are therefore modelled; the daily loss limit is not enforced across
+    symbols on this path, and the run says so.
+73. **One invalid ticker used to cost a whole batch its history.** Alpaca refuses an ENTIRE
+    multi-symbol bars request when any one symbol is invalid, and the replay universe deliberately
+    contains delisted names (`HYAC_DELISTED`, CUSIP-shaped ids, preferred tickers with dots). On a
+    600-symbol S1 run that left 98 symbols with daily history and 502 without — and those 502 were then
+    screened out of every session, quietly re-biasing the very universe countermeasure 1 exists to
+    protect. Batches now bisect to isolate the offender and remember it in `_rejected.json`; the same
+    run went to 499 covered symbols and 20 genuinely-invalid tickers. The coverage warning is what
+    surfaced it, which is the countermeasure doing its job on the countermeasure.
+74. **`float("inf")` is not JSON, and it was eating whole results.** `analytics.stats` returned an
+    infinite profit factor when a sample had no losing trades; Postgres rejected the insert and the
+    entire `backtests` row vanished behind a log line. It would have done the same to the weekly-review
+    prompt on the first flawless week. Profit factor is now `None` when there are no losers (the
+    `losers` count says why), `json_safe` scrubs any remaining non-finite value before the row is
+    written, and the promotion verdict treats "no losing trades" as clearing the profit-factor bar
+    rather than as unknown — an undefined ratio should not make a flawless sample unpassable, though
+    the sample-size check still applies.
+75. **Measured baselines, 2026-03-02 → 2026-09-05, SPY/QQQ, $25k equity, 0.5% risk** (recorded in
+    `backtests`): S4 150 trades / 34% win rate / **fail**; S5 45 trades / 8.9% / inconclusive; S6 54
+    trades / 11.1% / inconclusive; S7 215 trades / 15.8% / **fail**; S8 82 trades / 37.8% / **fail**.
+    Every one loses money after costs. Three points are worth stating plainly: the sample is a single
+    six-month window of one market regime; the entry rules are the deterministic stand-ins of #60, not
+    the Hermes plans the live system would use; and S5/S6 are `inconclusive` rather than `fail` purely
+    because they are under 100 trades. None of these is evidence to retire a strategy — it is evidence
+    that none of them may be promoted, which is exactly what the gate is for.

@@ -251,7 +251,16 @@ def run_symbol_day(cfg: StrategyConfig, symbol: str, bars: pd.DataFrame, *, spec
                    fill_model: FillModel, fee_model: dict, day_levels: dict, risk_dollars: float,
                    max_notional: float = 100_000.0, atr_value: float | None = None,
                    warmup: int = 0) -> SymbolDayResult:
-    """Replay one symbol for one session. `bars` includes `warmup` bars of context before the window."""
+    """Replay one symbol over `bars`, which is normally one session.
+
+    It may also be a CONTINUOUS multi-session frame, which is what a swing strategy needs: S8's setup
+    is a 60-minute divergence, and a regular session holds only about seven 60-minute bars, so a
+    per-session replay resets the setup memory before the pattern can form and the strategy produces
+    exactly nothing. Here the per-day counters (`max_trades_per_day`, the re-entry cooldown) reset when
+    the date changes while the setup memory and any open position carry across — which is the whole
+    point of a swing hold. `time_exit` still flattens an intraday strategy at its cutoff, so a day
+    strategy handed a multi-day frame behaves exactly as before.
+    """
     res = SymbolDayResult(symbol=symbol, bars=len(bars))
     if bars is None or bars.empty:
         res.notes.append("no bars")
@@ -285,11 +294,19 @@ def run_symbol_day(cfg: StrategyConfig, symbol: str, bars: pd.DataFrame, *, spec
         legs.append({"side": "sell" if pos.long else "buy", "price": exit_px, "qty": exit_qty,
                      "ts": str(ts), "reason": reason, "kind": kind})
 
+    cur_date = None
     for i in range(len(bars)):
         bar = bars.iloc[i]
         ts = bars.index[i]
         t = ts.time()
         window = bars.iloc[:i + 1]
+        if ts.date() != cur_date:
+            # a new session: the per-day trade budget and the cooldown start again. `gate_state` and
+            # any open position deliberately do NOT — a setup and a swing hold both outlive a session.
+            cur_date = ts.date()
+            trades_today = 0
+            cooldown_until = -1
+            pending = None
 
         # ---- 1. resting levels, checked against the bar's range, stop wins ambiguity ----
         if pos is not None:
