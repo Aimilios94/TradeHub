@@ -185,14 +185,18 @@ def step_strategies(check_only: bool = False) -> None:
     from app.db import get_client
 
     try:
-        rows = (get_client().table("strategy_configs").select("id,code,name,status,mode")
+        # The column is `automation_mode`, not `mode` — and asking for a non-existent `mode` does not
+        # come back as "no such column": PostgREST reads it as the ordered-set AGGREGATE of that name and
+        # answers "WITHIN GROUP is required for ordered-set aggregate mode", which reads like a syntax
+        # problem rather than a typo.
+        rows = (get_client().table("strategy_configs").select("id,code,name,status,automation_mode")
                 .order("code").execute().data or [])
     except Exception as e:  # noqa: BLE001
         print(f"  could not read strategy_configs: {str(e)[:140]}")
         return
 
     for r in rows:
-        print(f"  {r['code']:<4} {r['status']:<12} {r['mode']:<10} {r['name']}")
+        print(f"  {r['code']:<4} {r['status']:<12} {r['automation_mode']:<10} {r['name']}")
     if check_only:
         return
 
