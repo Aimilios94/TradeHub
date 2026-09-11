@@ -95,6 +95,12 @@ The dashboard. Deliberately last, after the engine has proven itself.
 
 ---
 
+### After Phase 7
+Run `/improve-codebase-architecture` — it scans the code for parts that grew awkward and suggests
+tidy-ups, as a visual report. Deliberately saved until the backtester is done, so it is not rearranging
+code we are still building on. `/diagnosing-bugs` is installed too and can be used any time something
+breaks.
+
 ### Waiting on you
 - **Reddit keys** — optional, widens news coverage on small stocks the big outlets ignore.
 - **Finviz Elite** — paid, skipped for now. Only affects exact float numbers.

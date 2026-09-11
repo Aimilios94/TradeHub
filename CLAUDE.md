@@ -65,6 +65,23 @@ tier; OpenRouter (Hermes 70B/405B) does judgment. Docker runs `engine`, `n8n` an
   import ONE workflow per command; a re-import **deactivates** the workflow — re-arm with
   `n8n update:workflow --id=tradehub-wf-NN --active=true` then restart the container.
 
+## Installed skills (`.claude/skills/`)
+
+From `mattpocock/skills`, installed 2026-09-11 via `npx skills add ... --copy`. `.agents/skills/` is the
+installer's source copy; `skills-lock.json` pins the versions. Update with `npx skills update`.
+
+- **`diagnosing-bugs`** — use it for any hard bug or performance regression. Its core discipline: build a
+  tight pass/fail signal that goes red on *this* bug BEFORE theorising. Model-invocable, so reach for it
+  when the owner reports something broken.
+- **`codebase-design`** — shared vocabulary for deep modules (module, interface, depth, seam, adapter).
+  A dependency of the skill below; not usually invoked alone.
+- **`improve-codebase-architecture`** — scans for shallow modules and proposes refactors, as an HTML
+  report. `disable-model-invocation: true`, so only the owner starts it.
+  **DO NOT run this until Phase 7 is finished** (owner's decision, 2026-09-11). Phases 0–6.5 are working,
+  tested and committed; the architecture review is for after the backtester lands, not for code we are
+  about to build on. When it does run, note that it looks for `CONTEXT.md` and `docs/adr/`, which this
+  repo does not have — `CLAUDE.md` and `docs/DECISIONS.md` are the equivalents.
+
 ## Commands
 
 ```powershell
