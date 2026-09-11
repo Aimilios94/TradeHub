@@ -39,3 +39,6 @@ supabase/.temp/
 Thumbs.db
 .vscode/
 .idea/
+
+# Claude Code — skills and CLAUDE.md are shared; local settings are not
+.claude/settings.local.json
