@@ -12,14 +12,16 @@ Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_i
 
 ## Repository layout
 ```
-engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/guardian/{briefing,rules}.py (Phase 6.5), app/{exits,backtest}/
+engine/            FastAPI service — app/{registry,models,config,db,auth,notify,main}.py, app/seed/, app/marketdata/ (Phase 1), app/scanner/ + app/detectors/basic.py (Phase 2), app/llm/ + app/sentiment/ (Phase 3), app/signals/ + app/broker/ (Phase 4), app/guardian/ + app/execution/ + app/monitor/ (Phase 5), app/journal/ + app/analytics/ + app/review/ (Phase 6), app/guardian/{briefing,rules}.py (Phase 6.5), app/detectors/{indicators,structure}.py + app/exits/plugins.py + app/backtest/ (Phase 7)
   scripts/gen_seed.py   generates supabase/migrations/0002_seed.sql (single source of truth = Python + prompt-library)
+  scripts/apply_sql.py  applies a migration, or only the seed statements that changed (--grep, --dry-run)
   tests/                pytest
-supabase/migrations/   0001_core_schema.sql · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql · 0004_symbol_stats.sql
+supabase/migrations/   0001_core_schema.sql · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql · 0004_symbol_stats.sql · 0005_briefings.sql · 0006_backtest_spec.sql
 supabase/functions/    market-proxy (Deno Edge Function — the frontend's only market-data door)
 prompt-library/        strategies/ frameworks/ hermes-core/ hermes-extensions/ extension-modules/ tests/ _originals/
-n8n/workflows/         exported workflow JSON (01 nightly baseline, more per phase)
-docker-compose.yml     engine + n8n
+n8n/workflows/         exported workflow JSON — 10 workflows, one per scheduled job (see its own README)
+data/parquet/          deep historical bars for the backtester (gitignored; shared by the host and the engine container)
+docker-compose.yml     engine + n8n + monitor
 .env.example           every key the project will ever need
 ```
 
@@ -42,7 +44,15 @@ docker-compose.yml     engine + n8n
    #        POST /journal/eod · GET /analytics/report · GET /analytics/ledger · POST /review/weekly
    #        POST /guardian/briefing · GET /guardian/state · POST /guardian/rules-check · GET /guardian/rules
    ```
-3. **Database:** create a Supabase project → apply `supabase/migrations/` in order (0001 schema, 0002 seed, 0003 pre-market profile, 0004 symbol_stats, 0005 briefings). From this PC use the session-pooler `SUPABASE_DB_URL` and `engine\.venv\Scripts\python -c "...psycopg..."` or the SQL editor. Re-seeding is idempotent (upserts; strategy `status` is never overwritten).
+3. **Database:** create a Supabase project → apply `supabase/migrations/` in order (0001 schema, 0002 seed, 0003 pre-market profile, 0004 symbol_stats, 0005 briefings, 0006 backtest spec). From this PC the session-pooler `SUPABASE_DB_URL` is required — the direct `db.<ref>` host is IPv6-only and will not resolve. Apply with:
+   ```powershell
+   cd engine; .\.venv\Scripts\python scripts\apply_sql.py ..\supabase\migrations\0006_backtest_spec.sql
+   ```
+   Re-seeding is idempotent (upserts; strategy `status` is never overwritten), but re-running the WHOLE seed overwrites every `app_settings` row including ones you have edited — so apply only what changed:
+   ```powershell
+   .\.venv\Scripts\python scripts\apply_sql.py --grep "insert into strategy_configs" ..\supabase\migrations\0002_seed.sql
+   ```
+   Add `--dry-run` to see which statements would run.
 4. **Secrets:** copy `.env.example` → `.env`, fill what the current phase needs. Never commit `.env`. Comments must be on their own lines (the dotenv loader treats a same-line `#` as part of the value). Check readiness any time:
    ```powershell
    cd engine; .\.venv\Scripts\python scripts\check_env.py     # OK / MISSING / FAIL per key, tests each one live, never prints secrets
@@ -80,10 +90,33 @@ three gotchas (batch tag collision, Git Bash path mangling, imports arrive inact
 | 5 | `/execute/*`: Telegram Deploy tap → enforcing Guardian Layer-1 gate → limit order → `orders`; synthetic pre-market stop in its own container; 09:31 OCO attach; kill switch | **done 2026-09-10** (paper only — live is refused in code until Phase 8) |
 | 6 | `/journal/eod` (FIFO round trips + Guardian Layer-2 ledger), `/analytics/report` (§14), `/review/weekly` (templates 05+06 → `hypotheses`), degradation trigger; n8n crons 06/07 | **done 2026-09-10** (proposals only — nothing is auto-applied) |
 | 6.5 | `/guardian/briefing` (Layer 3, plain-language state report, reachable as `/guardian` in Telegram) + `/guardian/rules-check` (monthly source-page freshness → `compliance_events`); `docs/BROKER_RULES.md`; n8n crons 08/09 | **done 2026-09-10** |
-| 7 | backtest engine + S1–S8 baselines + S6 vs S7 | |
+| 7 | `/backtest/*`: scanner-universe replay with the four §13 countermeasures (survivorship coverage, IEX↔SIP calibration, an explicit pessimistic fill model, min-sample + walk-forward guards); the remaining 23 detectors and 9 exit plugins, so the registry is fully implemented; per-strategy `BacktestSpec` (migration 0006); parquet bar cache; hypothesis grading + `/backtest/promote`; n8n cron 10 | **done 2026-09-11** (baselines recorded for S4–S8; **S1 and S3 full baselines still to run** — see below. Nothing is auto-applied; promotion needs a passing backtest and live is still refused in code) |
 | 8 | hardening, onboarding, failure policy, tunnel, then ≥ 4-week paper month | |
 | 9 | UI (React + Tailwind against the mockup) | |
 | E1→E2→E5→FL→E3→E4 | extension modules, after the paper month | |
+
+## Backtest baselines (first measured, 2026-09-11)
+`2026-03-02 → 2026-09-05`, SPY/QQQ, $25k equity, 0.5% risk per trade, stored in `backtests`:
+
+| | trades | win rate | expectancy | verdict |
+|---|---|---|---|---|
+| S4 HPS Quad Divergence | 150 | 34.0% | −53.05 | **fail** |
+| S5 20/20 Bull Flag | 45 | 8.9% | −96.99 | inconclusive (under 100 trades) |
+| S6 Bear Flag (PDF canonical) | 54 | 11.1% | −79.06 | inconclusive (under 100 trades) |
+| S7 Bear Flag (interview variant) | 215 | 15.8% | −74.21 | **fail** |
+| S8 HPS Swing Divergence | 82 | 37.8% | −79.23 | **fail** |
+
+All five lose money after costs, against the source PDF's claimed ~95% win rates — which is why win rate
+is never the gate. **Read them with their limits attached:** one six-month window of one market regime,
+and the entries are the deterministic stand-ins each strategy declares in its `backtest` block
+(decision #60), not the Hermes plans the live system produces. They are not grounds to retire a
+strategy; they are grounds to promote none of it. **S6 vs S7** (spec §17 criterion 1): S7 is less bad
+per trade but lost four times as much in total; both losing, so no winner. **S5's optional ATR target
+could not be calibrated** — 43 of its 45 trades were stopped out and the target was never reached.
+
+Still open: **S1 and S3 have no full baseline yet** (both are screener strategies over the ~16k-symbol
+universe, so a real run is long). S2 is correctly absent — a briefing has no entry, stop or size, so
+there is nothing to replay, and the run says so rather than skipping silently.
 
 ## Non-negotiables (from the spec)
 Strategies are data, never code · LLMs never compute · keys never reach the frontend · pre-market = limit only, synthetic stop, no brackets · only `buying_power` (PDT fields are gone) · same feed on both sides of every relative-volume ratio (SIP baseline vs SIP live — decision #10) · paper trading before live · win rate is never the gate · not financial advice; tax provision is a display estimate.
