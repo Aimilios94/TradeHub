@@ -359,3 +359,23 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     the Hermes plans the live system would use; and S5/S6 are `inconclusive` rather than `fail` purely
     because they are under 100 trades. None of these is evidence to retire a strategy — it is evidence
     that none of them may be promoted, which is exactly what the gate is for.
+76. **S6 vs S7 (plan §17 criterion 1), 2026-03-02 → 2026-09-05:** S7 wins on expectancy after costs
+    (−74.21 vs −79.06 per trade) — but **both lose money**, so the winner is only the less bad of the
+    two and neither may be promoted. S7 also took four times as many trades (215 vs 54) for four times
+    the total damage (−15,955 vs −4,269), which is what "short EVERY rotation" buys you. `compare` now
+    reports `both_losing` and says this in its own note, because a bare `"winner": "S7"` reads as an
+    endorsement. The PDF-canonical/interview question the A/B was built to settle therefore has no
+    answer yet: on this window neither variant has an edge to prefer.
+77. **S5's optional ATR target could not be calibrated, and the reason is the useful part.** Sweeping
+    `target_atr_multiple` over 0.5 / 0.75 / 1.0 returned byte-identical metrics. Not a broken override
+    — verified it reaches the spec and moves the target — but because of the 45 trades, **43 exited at
+    the stop and 2 at the time exit; the target was never once reached**. The interview_supplement
+    target is not the binding constraint on this strategy over this window; the pattern-low stop is.
+    Calibrating it needs either a window where S5 actually wins or a change to the stop first.
+78. **`PARQUET_STORE_PATH` was relative, so it meant a different directory to each caller.**
+    `./data/parquet` resolved against the process working directory: the repo root for the container,
+    but `engine/` for every CLI run, which is where they are started. Host and container therefore kept
+    SEPARATE 18 MB bar caches with neither being wrong, and an n8n-triggered backtest would have
+    re-downloaded history the owner had already paid for. Relative paths in `.env` now anchor to the
+    repo root (`Settings._anchor_to_repo`), the compose mount moved to `./data:/srv/data` to match, and
+    the stray `engine/data/` cache was moved into place.

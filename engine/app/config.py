@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +53,20 @@ class Settings(BaseSettings):
     parquet_store_path: Path = REPO_ROOT / "data" / "parquet"
     prompt_library_path: Path = REPO_ROOT / "prompt-library"
     log_level: str = "INFO"
+
+    @field_validator("parquet_store_path", "prompt_library_path", mode="after")
+    @classmethod
+    def _anchor_to_repo(cls, v: Path) -> Path:
+        """A relative path in .env must not mean "wherever the caller happened to be".
+
+        `PARQUET_STORE_PATH=./data/parquet` resolved against the current working directory, so the same
+        setting pointed at `<repo>/data/parquet` from the repo root and at `<repo>/engine/data/parquet`
+        from inside `engine/` — which is where every CLI run is started. The container and the host
+        therefore kept SEPARATE bar caches without either of them being wrong, and a backtest triggered
+        by n8n re-downloaded everything the owner had already cached. Anchoring to the repo root makes
+        the setting mean one directory.
+        """
+        return v if v.is_absolute() else (REPO_ROOT / v).resolve()
 
     @property
     def supabase_configured(self) -> bool:

@@ -577,3 +577,17 @@ def test_an_ab_between_two_losing_configs_does_not_read_as_an_endorsement():
                      M.compute(sample_trades(120, 1.0), min_trades=100), label_a="x", label_b="y")
     assert good["both_losing"] is False
     assert "less bad" not in good["note"]
+
+
+def test_a_relative_store_path_means_the_same_directory_wherever_it_is_read_from():
+    """`PARQUET_STORE_PATH=./data/parquet` used to resolve against the caller's working directory, so
+    the host CLI (run from `engine/`) and the container kept separate bar caches without either being
+    wrong — and an n8n-triggered backtest re-downloaded history the owner had already cached."""
+    from app.config import REPO_ROOT, Settings
+
+    s = Settings(parquet_store_path="./data/parquet", prompt_library_path="prompt-library")
+    assert s.parquet_store_path == (REPO_ROOT / "data" / "parquet").resolve()
+    assert s.prompt_library_path == (REPO_ROOT / "prompt-library").resolve()
+
+    absolute = Settings(parquet_store_path="/srv/elsewhere")
+    assert str(absolute.parquet_store_path).endswith("elsewhere"), "an absolute path is left alone"

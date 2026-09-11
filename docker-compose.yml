@@ -16,7 +16,7 @@ services:
       - "8000:8000"
     volumes:
       - ./prompt-library:/srv/prompt-library:ro
-      - ./data:/srv/engine/data
+      - ./data:/srv/data                                   # REPO_ROOT/data — the same directory the host CLI uses
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
