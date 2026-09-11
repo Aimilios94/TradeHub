@@ -109,15 +109,35 @@ Replay any strategy over past data and find out whether it actually works — *b
   strategy needs a passing backtest, and going live is still blocked in the code.
 - **History is cached on your PC** (`data/parquet/`) so re-running a test does not re-download anything.
 
-**What it found immediately:** two of your strategies (S4 and S8, the Kurisko divergence setups) could
-never have produced a single signal. They asked for "all four stochastics under 20" and "the fast one
-crossing back up through 20" *on the same bar* — which cannot both be true, ever. Over 68 days of SPY
-the first fired 917 times, the second 422 times, together **zero**. Fixed: the first is now treated as
-a setup that happened recently, which is what the strategy always meant. It also found the journal was
-subtracting your trading spread twice, making every trade look slightly worse than it was.
+**What it found immediately:** five of your strategies could never have produced a single signal.
+S4 and S8 asked for "all four stochastics under 20" and "the fast one crossing back up through 20"
+*on the same bar* — which cannot both be true, ever. Over 68 days of SPY the first fired 917 times,
+the second 422, together **zero**. S5, S6 and S7 had the same flaw in a different shape. Fixed: the
+first condition is now "this happened recently", which is what the strategies always meant. It also
+found the journal was subtracting your trading spread twice, and that one dead ticker was making the
+data provider refuse a whole batch of 100 — costing 99 good stocks their history on every scan.
 
-First measured result: S4 over June–September made 88 trades with a 33% win rate and lost money.
-The PDF claimed ~95%. That is the backtester doing its job.
+**First measured baselines** (March–September 2026, SPY/QQQ, $25k account, 0.5% risk per trade):
+
+| Strategy | Trades | Win rate | Verdict |
+|---|---|---|---|
+| S4 HPS Quad Divergence | 150 | 34% | **fail** |
+| S5 20/20 Bull Flag | 45 | 9% | not enough trades to say |
+| S6 Bear Flag (PDF) | 54 | 11% | not enough trades to say |
+| S7 Bear Flag (variant) | 215 | 16% | **fail** |
+| S8 Swing Divergence | 82 | 38% | **fail** |
+
+All five lose money after costs, against the PDF's claimed ~95% win rates. **Read this carefully
+before concluding anything:** it is one six-month window of one market, and the entry prices come from
+the backtester's own simple rules, not from the trade plans the AI writes live. It is not proof these
+strategies are bad — it is proof that none of them may be promoted yet, which is what the gate is for.
+
+**S6 vs S7** (the A/B the plan asked for): S7 is the less bad of the two per trade, but it lost four
+times as much in total because it takes four times as many trades. Neither wins.
+
+**S5's optional profit target could not be tuned** — of its 45 trades, 43 were stopped out and 2 ran
+out of time. The target was never reached once, so changing it changes nothing. The stop needs
+attention first.
 
 ## ⬜ Phase 8 — Hardening + paper month *(next)*
 At least 4 weeks of paper trading. Nothing goes live before this.
