@@ -73,7 +73,7 @@ The system starts learning from you.
 Suggestions are never applied on their own. Anything that would loosen a risk limit is thrown out
 automatically, and the rest waits for a backtest (Phase 7) and your approval.
 
-## ✅ Phase 6.5 — Guardian briefing  ← you are here, just finished
+## ✅ Phase 6.5 — Guardian briefing
 - **Ask it anything, from your phone** — send `/guardian` to the bot (optionally with a question like
   "am I taking too much risk?") and it replies in plain English: where your account stands, what changed,
   active warnings, this month's costs, the tax provision, and up to three concrete suggestions.
@@ -83,11 +83,43 @@ automatically, and the rest waits for a backtest (Phase 7) and your approval.
   orders"). On the 1st of each month it checks whether the broker's own pages changed and tells you which
   rule to re-read. It flags; you decide. It found two dead links the first time it ran.
 
-## ⬜ Phase 7 — Backtest engine *(next)*
-Replay a strategy over past data with realistic fills and fees, so you know if it works *before*
-risking money. Also adds the remaining chart indicators (VWAP, EMAs, volume profile).
+## ✅ Phase 7 — Backtest engine  ← you are here, just finished
+Replay any strategy over past data and find out whether it actually works — *before* risking money.
 
-## ⬜ Phase 8 — Hardening + paper month
+- **All 32 indicators and exits are now built.** VWAP, EMAs, RSI, the four Kurisko stochastic bands
+  (9-3, 14-3, 40-4, 60-10), the quad, embedded readings, divergence, opening range, 52-week bases,
+  double tops and bottoms, sector strength, volume profile, plus all nine exit rules (trailing stops,
+  the 2-bar stop, partials on rotation, breakeven, time exits). The same code runs live and in the
+  backtest, so the two can never drift apart.
+- **It replays the SCANNER, not a chart.** For every past morning it rebuilds the list your 08:00 scan
+  would have produced — using only what was knowable that morning — and trades from it. Testing one
+  chart you already know the answer to is how people fool themselves.
+- **It refuses to flatter you.** Four safeguards the plan demanded, each with a test:
+  *delisted stocks are kept in* (a low-float universe with no bankruptcies in it is not clean, it is
+  missing the ones that went to zero — Alpaca has 2,867 of them, 18% of the market);
+  *volume thresholds are rescaled* between the live feed and the history feed;
+  *fills are realistic* — a limit order only fills if the market traded THROUGH your price, not just
+  touched it; a stop that gaps fills at the open, not at your stop; you never get more than 10% of a
+  bar's volume; and a bar that hit both your stop and your target counts as a **stop**;
+  *small samples are called small* — under 100 trades the verdict is "not enough data", never "pass".
+- **Win rate still decides nothing.** It is shown; expectancy after costs is what is judged.
+- **Suggestions get graded automatically.** Sunday's review writes ideas; two hours later the
+  backtester runs each one twice — your current settings versus the proposed change, same dates, same
+  costs — and marks it validated or rejected. **Nothing is ever applied on its own.** Promoting a
+  strategy needs a passing backtest, and going live is still blocked in the code.
+- **History is cached on your PC** (`data/parquet/`) so re-running a test does not re-download anything.
+
+**What it found immediately:** two of your strategies (S4 and S8, the Kurisko divergence setups) could
+never have produced a single signal. They asked for "all four stochastics under 20" and "the fast one
+crossing back up through 20" *on the same bar* — which cannot both be true, ever. Over 68 days of SPY
+the first fired 917 times, the second 422 times, together **zero**. Fixed: the first is now treated as
+a setup that happened recently, which is what the strategy always meant. It also found the journal was
+subtracting your trading spread twice, making every trade look slightly worse than it was.
+
+First measured result: S4 over June–September made 88 trades with a 33% win rate and lost money.
+The PDF claimed ~95%. That is the backtester doing its job.
+
+## ⬜ Phase 8 — Hardening + paper month *(next)*
 At least 4 weeks of paper trading. Nothing goes live before this.
 
 ## ⬜ Phase 9 — User interface
@@ -95,11 +127,10 @@ The dashboard. Deliberately last, after the engine has proven itself.
 
 ---
 
-### After Phase 7
+### Now due
 Run `/improve-codebase-architecture` — it scans the code for parts that grew awkward and suggests
-tidy-ups, as a visual report. Deliberately saved until the backtester is done, so it is not rearranging
-code we are still building on. `/diagnosing-bugs` is installed too and can be used any time something
-breaks.
+tidy-ups, as a visual report. It was deliberately saved until the backtester was done — it is done, so
+this can run now. `/diagnosing-bugs` is installed too and can be used any time something breaks.
 
 ### Waiting on you
 - **Reddit keys** — optional, widens news coverage on small stocks the big outlets ignore.

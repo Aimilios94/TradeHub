@@ -160,7 +160,7 @@ def render() -> str:
         tpl = (f"(select id from prompt_templates where slug = {sql_str(s.prompt_template_slug)})"
                if s.prompt_template_slug else "null")
         w(f"insert into strategy_configs (code, name, creator, provenance, style, timeframe, automation_mode, status, instruments, "
-          f"frameworks, universe, entry_conditions, exit_logic, risk, reentry, prompt_template_id, library_file, notes) values\n"
+          f"frameworks, universe, entry_conditions, exit_logic, risk, reentry, backtest, prompt_template_id, library_file, notes) values\n"
           f"  ({sql_str(s.code)}, {sql_str(s.name)}, {sql_str(s.creator)}, {sql_str(s.provenance.value)}, {sql_str(s.style.value)}, "
           f"{sql_str(s.timeframe)}, {sql_str(s.automation_mode.value)}, {sql_str(s.status.value)}, {sql_str(s.instruments)},\n"
           f"  {sql_text_array(list(s.frameworks))},\n"
@@ -169,12 +169,13 @@ def render() -> str:
           f"  {sql_str([e.model_dump(mode='json', exclude_none=True) for e in s.exit_logic])},\n"
           f"  {sql_str(s.risk.model_dump(mode='json', exclude_none=True))},\n"
           f"  {sql_str(s.reentry.model_dump(mode='json'))},\n"
+          f"  {sql_str(s.backtest.model_dump(mode='json')) if s.backtest else 'null'},\n"
           f"  {tpl}, {sql_str(s.library_file)}, {sql_str(s.notes)})\n"
           f"  on conflict (code) do update set name = excluded.name, creator = excluded.creator, provenance = excluded.provenance, "
           f"style = excluded.style, timeframe = excluded.timeframe, automation_mode = excluded.automation_mode, "
           f"instruments = excluded.instruments, frameworks = excluded.frameworks, universe = excluded.universe, "
           f"entry_conditions = excluded.entry_conditions, exit_logic = excluded.exit_logic, risk = excluded.risk, "
-          f"reentry = excluded.reentry, prompt_template_id = excluded.prompt_template_id, library_file = excluded.library_file, "
+          f"reentry = excluded.reentry, backtest = excluded.backtest, prompt_template_id = excluded.prompt_template_id, library_file = excluded.library_file, "
           f"notes = excluded.notes;  -- status intentionally NOT overwritten on re-seed")
     w("")
     w("commit;")

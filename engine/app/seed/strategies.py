@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from app.models import (
     AutomationMode,
+    BacktestSpec,
     Condition,
     Direction,
     EntryConditions,
@@ -70,6 +71,14 @@ S1 = StrategyConfig(
               order_types=["limit"], spread_ceiling_pct=2.0,
               notes="Limit orders ONLY — spreads are the killer. Guardian spread ceiling applies hard."),
     reentry=Reentry(allowed=False),
+    backtest=BacktestSpec(
+        entry_rule="premarket_high_break", entry_offset_pct=0.1, entry_window="07:00-10:30",
+        stop_rule="percent", stop_pct=4.0, target_rule="r_multiple", target_r=2.0,
+        bar_timeframe="1Min", max_trades_per_day=1,
+        notes="Deterministic stand-in for the Hermes plan: a buy-stop 0.1% above the pre-market high, "
+              "which is the entry the strategy card describes. The stop is a percentage, not a pattern "
+              "low: pre-market bars on a low-float name are too sparse for a pattern low to mean much.",
+    ),
     prompt_template_slug="morning_trade_plan",
     library_file="prompt-library/strategies/S1_low-float-gapper_OWN.md",
     notes="IEX understates true pre-market volume on small caps — the ratio is valid only because the baseline is IEX too. "
@@ -102,6 +111,7 @@ S2 = StrategyConfig(
     ),
     exit_logic=[ExitStep(plugin="time_exit", params={"flat_by": "15:55"}, label="n/a — trades are manual")],
     risk=Risk(risk_per_trade_pct=0.5, max_concurrent=3, session="regular", notes="Manual trades pass the Guardian gate like any order."),
+    backtest=None,   # a briefing has no entry, stop, target or size — there is nothing to replay
     prompt_template_slug="watchlist_briefing",
     library_file="prompt-library/strategies/S2_premarket-watchlist-briefing_OWN.md",
     notes="Replaces the owner's manual copy-paste prompt (original 03); everything it asked the user to paste is auto-filled.",
@@ -152,6 +162,14 @@ S3 = StrategyConfig(
         ExitStep(plugin="time_exit", when="regular", params={"flat_by": "15:55"}),
     ],
     risk=Risk(risk_per_trade_pct=0.5, max_concurrent=3, daily_loss_limit_r=2.0, session="regular", order_types=["limit"]),
+    backtest=BacktestSpec(
+        entry_rule="opening_range_break", entry_offset_pct=0.05, entry_window="09:30-11:30",
+        opening_range_minutes=15, stop_rule="opening_range_opposite", target_rule="r_multiple",
+        target_r=2.0, bar_timeframe="5Min", max_trades_per_day=1, max_symbols_per_day=3,
+        notes="The opening-range break is the most common of the setups the card lists (ORB, VWAP "
+              "bounce, momentum continuation), so it is the one the replay grades. What is measured is "
+              "the ORB on SMB-filtered stocks-in-play, not the whole strategy.",
+    ),
     prompt_template_slug="morning_trade_plan",
     library_file="prompt-library/strategies/S3_stocks-in-play_SMB-CAPITAL.md",
     notes="Liquid names — best-quality data on the free IEX feed. Recommended first live candidate with S8.",
@@ -182,8 +200,15 @@ S4 = StrategyConfig(
              "params": {"trigger_level": 20}},
         ],
         all=[
-            Condition(detector="stoch_quad_extreme", params={"bands": QUAD_BANDS, "side": "under", "threshold": 20}),
-            Condition(detector="stoch_divergence", params={"k": 9, "d": 3, "swing_lookback": 5, "trigger_level": 20}),
+            # STAGE 1, not a same-bar gate. The quad is under 20 at the capitulation; the trigger is the
+            # 9-3 turning back UP through 20, which is the moment the quad stops being under it. Written
+            # as two same-bar conditions the pair can never both be true and the strategy silently never
+            # fires — `within_bars` is what makes the sequence in `stages` expressible (decision #63).
+            Condition(detector="stoch_quad_extreme", params={"bands": QUAD_BANDS, "side": "under", "threshold": 20},
+                      within_bars=30,
+                      label="stage 1: all four bands reached under 20 within the last 30 bars (2.5h on 5-min)"),
+            Condition(detector="stoch_divergence", params={"k": 9, "d": 3, "swing_lookback": 5, "trigger_level": 20},
+                      label="trigger: higher stochastic low against an equal-or-lower price low, 9-3 turning up through 20"),
         ],
         soft=[
             Condition(detector="stochastic", params={"k": 9, "d": 3}, label="5-min/60-min stoch turning up off oversold (confluence flag)"),
@@ -206,6 +231,14 @@ S4 = StrategyConfig(
         ExitStep(plugin="time_exit", params={"flat_by": "15:55"}),
     ],
     risk=Risk(risk_per_trade_pct=0.5, max_concurrent=2, session="regular", order_types=["limit", "stop_limit"]),
+    backtest=BacktestSpec(
+        entry_rule="next_bar_open", entry_window="09:35-15:30", stop_rule="pattern_low",
+        stop_lookback_bars=3, target_rule="r_multiple", target_r=2.0, bar_timeframe="5Min",
+        warmup_bars=80, max_trades_per_day=1,
+        notes="Fills at the NEXT bar's open, not the trigger bar's close: S4 is semi_auto and the "
+              "human channel check cannot happen inside the bar that fired. The 60-10 band needs ~70 "
+              "bars to warm up, hence no entries before 09:35 on a 5-minute chart.",
+    ),
     library_file="prompt-library/strategies/S4_hps-quad-divergence_JOHN-KURISKO.md",
     notes="Ported up from 1-min futures scalping to 5-min on ETFs/liquid stocks — our stack does not scalp 1-min on IEX data.",
 )
@@ -227,14 +260,19 @@ S5 = StrategyConfig(
         direction=Direction.long,
         all=[
             Condition(detector="ema", params={"period": 50}, field="price_above", op="true", label="market uptrend: price above 50 EMA"),
+            # The pole and the embedded bands are the SETUP; the 9-3 rotating down to 20 is the TRIGGER,
+            # and by then the pullback has already dragged the fast bands off their extreme and price
+            # back to the 20 EMA (which resets the pole). Same trap as S4 — see decision #63.
             Condition(detector="flagpole_steepness", params={"ema_period": 20, "baseline_bars": 50, "min_multiple": 1.5},
-                      op="true", label="aggressive flagpole off the 20 EMA"),
+                      op="true", within_bars=12,
+                      label="aggressive flagpole off the 20 EMA within the last hour"),
             Condition(detector="stoch_embedded", params={"k": 60, "d": 10, "side": "over", "threshold": 85, "min_bars": 3},
-                      op="true", label="slow 60-10 embedded above 85 (preferably 90) — PDF canonical"),
+                      op="true", within_bars=12,
+                      label="slow 60-10 embedded above 85 (preferably 90) — PDF canonical"),
             Condition(detector="stoch_embedded", params={"k": 14, "d": 3, "side": "over", "threshold": 80, "min_bars": 2},
-                      op="true", label="medium holding above 80"),
+                      op="true", within_bars=12, label="medium holding above 80"),
             Condition(detector="stochastic", params={"k": 9, "d": 3}, field="k", op="<=", value=20,
-                      label="9-3 rotates down to 20 — buy into weakness"),
+                      label="trigger: 9-3 rotates down to 20 — buy into weakness"),
         ],
         soft=[
             Condition(detector="ema", params={"period": 20}, label="pullback to the 20 EMA / 50 EMA zone"),
@@ -254,6 +292,13 @@ S5 = StrategyConfig(
         ExitStep(plugin="time_exit", params={"flat_by": "15:55"}),
     ],
     risk=Risk(risk_per_trade_pct=0.5, max_concurrent=2, session="regular", order_types=["limit"]),
+    backtest=BacktestSpec(
+        entry_rule="next_bar_open", entry_window="09:35-15:30", stop_rule="pattern_low",
+        stop_lookback_bars=2, target_rule="atr_multiple", target_atr_multiple=0.75,
+        bar_timeframe="5Min", warmup_bars=80, max_trades_per_day=1,
+        notes="The optional ATR 'next push' target is interview_supplement, not PDF canon, so it is a "
+              "PARAMETER here: sweep target_atr_multiple over 0.5-1.0 to calibrate it (plan Phase 7).",
+    ),
     library_file="prompt-library/strategies/S5_hps-2020-bull-flag_JOHN-KURISKO.md",
     notes="The ATR 'next push' target is flagged provenance=interview_supplement inside the exit step; calibrate in Phase 7.",
 )
@@ -274,13 +319,17 @@ S6 = StrategyConfig(
     entry_conditions=EntryConditions(
         direction=Direction.short,
         all=[
+            # The embedded bands are the downtrend REGIME and the 9-3 at 80 is the trigger; the bounce
+            # that produces the trigger is the same bounce that breaks the embed, so the regime is a
+            # setup held within the last hour (12 bars on 5-min). Measured on 131 sessions of SPY:
+            # both bands held within 12 bars of ~20-30% of trigger bars, and within 0 bars of none.
             Condition(detector="stoch_embedded", params={"k": 60, "d": 10, "side": "under", "threshold": 20, "min_bars": 3},
-                      op="true", label="slow holding under 20"),
+                      op="true", within_bars=12, label="slow 60-10 held under 20 within the last hour"),
             Condition(detector="stoch_embedded", params={"k": 14, "d": 3, "side": "under", "threshold": 20, "min_bars": 2},
-                      op="true", label="medium holding under 20"),
+                      op="true", within_bars=12, label="medium 14-3 held under 20 within the last hour"),
             Condition(detector="ema", params={"period": 20}, field="price_below_or_at", op="true", label="price at/below the 20 EMA"),
             Condition(detector="stochastic", params={"k": 9, "d": 3}, field="k", op=">=", value=80,
-                      label="short when the 9-3 rotates UP to the 80 line"),
+                      label="trigger: short when the 9-3 rotates UP to the 80 line"),
         ],
         human_confirm=["flag shape", "prevailing downtrend (Framework B)"],
         notes="PDF slide's 'go long' at the 80 touch is an obvious typo in a short setup — treated as short. Single entry per setup.",
@@ -295,6 +344,13 @@ S6 = StrategyConfig(
     risk=Risk(risk_per_trade_pct=0.5, max_concurrent=2, session="regular", order_types=["limit"],
               notes="Shorting requires margin account ≥ $2,000 + ETB; Guardian ETB check for individual stocks."),
     reentry=Reentry(allowed=False),
+    backtest=BacktestSpec(
+        entry_rule="next_bar_open", entry_window="09:35-15:30", stop_rule="pattern_low",
+        stop_lookback_bars=2, target_rule="r_multiple", target_r=2.0, bar_timeframe="5Min",
+        warmup_bars=80, max_trades_per_day=1,
+        notes="Identical spec to S7 on purpose — the A/B must differ only in the entry conditions, "
+              "or it measures the fill rules instead of the strategies.",
+    ),
     library_file="prompt-library/strategies/S6_hps-bear-flag-canonical_JOHN-KURISKO.md",
     notes="A/B against S7 in Phase 7; promote whichever the backtest prefers.",
 )
@@ -317,9 +373,10 @@ S7 = StrategyConfig(
         all=[
             Condition(detector="ema", params={"period": 200}, field="price_below", op="true", label="trending DOWN under the 200 EMA"),
             Condition(detector="stoch_embedded", params={"k": 60, "d": 10, "side": "under", "threshold": 30, "min_bars": 3},
-                      op="true", label="60-10 embedded below 20–30 ('banging around the bottom')"),
+                      op="true", within_bars=12,
+                      label="60-10 embedded below 20–30 ('banging around the bottom') within the last hour"),
             Condition(detector="stochastic", params={"k": 9, "d": 3}, field="k", op=">=", value=80,
-                      label="short EVERY 9-3 rotation up above 80"),
+                      label="trigger: short EVERY 9-3 rotation up above 80"),
         ],
         human_confirm=["prevailing downtrend (Framework B)"],
         notes="Re-entry enabled: every rotation is a fresh short while the regime holds.",
@@ -333,6 +390,13 @@ S7 = StrategyConfig(
     risk=Risk(risk_per_trade_pct=0.5, max_concurrent=2, session="regular", order_types=["limit"],
               notes="Same shorting requirements as S6."),
     reentry=Reentry(allowed=True, max_entries=3, cooldown_bars=2),
+    backtest=BacktestSpec(
+        entry_rule="next_bar_open", entry_window="09:35-15:30", stop_rule="pattern_low",
+        stop_lookback_bars=2, target_rule="r_multiple", target_r=2.0, bar_timeframe="5Min",
+        warmup_bars=80, max_trades_per_day=3,
+        notes="Same spec as S6 except max_trades_per_day, because 'short EVERY rotation' IS the "
+              "variant. Re-entry is capped by the config's own max_entries.",
+    ),
     library_file="prompt-library/strategies/S7_hps-bear-flag-variantB_JOHN-KURISKO-interview.md",
     notes="Kept as Variant B for A/B testing against S6; PDF wins on every other conflict.",
 )
@@ -353,8 +417,11 @@ S8 = StrategyConfig(
     entry_conditions=EntryConditions(
         direction=Direction.both,
         all=[
-            Condition(detector="stoch_quad_extreme", params={"bands": QUAD_BANDS, "side": "under", "threshold": 20}),
-            Condition(detector="stoch_divergence", params={"k": 9, "d": 3, "swing_lookback": 5, "trigger_level": 20}),
+            Condition(detector="stoch_quad_extreme", params={"bands": QUAD_BANDS, "side": "under", "threshold": 20},
+                      within_bars=12,
+                      label="stage 1: all four bands reached under 20 within the last 12 bars (~2 sessions on 60-min)"),
+            Condition(detector="stoch_divergence", params={"k": 9, "d": 3, "swing_lookback": 5, "trigger_level": 20},
+                      label="trigger: 9-3 turning up through 20 on a higher stochastic low"),
         ],
         soft=[
             Condition(detector="stochastic", params={"k": 60, "d": 10}, label="daily oversold alignment"),
@@ -371,6 +438,14 @@ S8 = StrategyConfig(
         ExitStep(plugin="trailing_pct", when="after_partial", params={"trail_pct": 4.0}, label="wider trail; holds overnight/days"),
     ],
     risk=Risk(risk_per_trade_pct=0.75, max_concurrent=3, daily_loss_limit_r=2.0, session="swing", order_types=["limit", "stop_limit"]),
+    backtest=BacktestSpec(
+        entry_rule="next_bar_open", entry_window="10:00-15:00", stop_rule="pattern_low",
+        stop_lookback_bars=2, target_rule="r_multiple", target_r=2.5, bar_timeframe="1Hour",
+        warmup_bars=120, max_trades_per_day=1, max_symbols_per_day=3,
+        notes="60-minute bars, so a 'day' in the replay is a session and a position may run to the "
+              "session's end. Swing holds across sessions are NOT modelled: the loop is per session, "
+              "so this measures the 60-min entry, not the multi-day hold.",
+    ),
     library_file="prompt-library/strategies/S8_hps-swing-divergence_JOHN-KURISKO.md",
     notes="Easiest strategy for our stack: daily bars are free and perfect quality, latency irrelevant, no pre-market complexity. Good early live candidate.",
 )

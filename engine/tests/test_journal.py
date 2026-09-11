@@ -121,6 +121,22 @@ def test_spread_cost_uses_the_midpoint_recorded_at_submit():
     assert jbuild.spread_cost(trip, []) == 0.0                            # unknown, not guessed
 
 
+def test_net_pnl_does_not_deduct_the_spread_twice():
+    """Regression, found in Phase 7. `pnl_gross` is computed from the ACTUAL fill prices, so the spread
+    paid is already inside it; `spread_cost` measures how much of that gross the spread ate. Deducting
+    it again understated every net figure and made journal and backtest numbers non-comparable — the
+    comparison the promotion workflow (plan §13) is built on."""
+    legs = jbuild.parse_fills([fill(14, 0, "buy", 100, 10.05, "oA"), fill(15, 0, "sell", 100, 10.95, "oB")])
+    trip = jbuild.match_round_trips(legs)[0][0]
+    orders = [{"alpaca_order_id": "oA", "quote_mid_at_submit": 10.00},
+              {"alpaca_order_id": "oB", "quote_mid_at_submit": 11.00}]
+    row = jbuild.build_row(trip, dt.date(2026, 9, 10), plan=None, orders=orders, fees=0.5, trade_number=1)
+    assert row["pnl_gross"] == pytest.approx(90.0)        # (10.95 - 10.05) x 100
+    assert row["spread_cost"] == pytest.approx(10.0)      # reported, for awareness
+    assert row["pnl_net"] == pytest.approx(89.5)          # gross less fees only
+    assert row["pnl_net"] != pytest.approx(79.5)
+
+
 def test_deviations_name_what_went_off_plan():
     legs = jbuild.parse_fills([fill(14, 0, "buy", 50, 10.0), fill(15, 0, "sell", 50, 10.4)])
     trip = jbuild.match_round_trips(legs)[0][0]

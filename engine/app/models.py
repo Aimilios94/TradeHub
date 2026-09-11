@@ -73,13 +73,23 @@ Universe = ScreenerUniverse | WatchlistUniverse
 
 class Condition(BaseModel):
     """One detector evaluation. `op`/`value` compare the detector output to a threshold.
-    `field` selects a sub-output when the detector returns several (e.g. volume_profile.poc)."""
+    `field` selects a sub-output when the detector returns several (e.g. volume_profile.poc).
+
+    `within_bars` makes a condition a SETUP rather than a trigger: it is satisfied if it held on the
+    current bar or on any of the previous `within_bars - 1`. Multi-stage patterns need this. S4's quad
+    -under-20 and its divergence trigger can never both be true on one bar — the trigger is the 9-3
+    crossing UP through 20, which is exactly when the quad stops being under it — so expressing both as
+    same-bar gates silently guarantees zero signals forever. It only means anything where bars are
+    walked in order (the backtester and the Phase 7 live detector loop); the 08:00 screener evaluates a
+    single moment and ignores it.
+    """
 
     detector: str
     params: dict[str, Any] = Field(default_factory=dict)
     field: str | None = None
     op: Literal[">", ">=", "<", "<=", "==", "true", "false", "between", "in"] = "true"
     value: Any = None
+    within_bars: int | None = Field(None, ge=1)
     label: str | None = None
 
     @field_validator("detector")
@@ -146,6 +156,39 @@ class Reentry(BaseModel):
         return self
 
 
+# ---------- backtest ----------
+
+class BacktestSpec(BaseModel):
+    """How the backtester turns this strategy into trades (plan §13).
+
+    Live, the exact entry price of an S1/S3 trade comes from a Hermes plan. A backtest cannot call
+    Hermes and must not pretend to: it would be grading judgment with hindsight. So every backtestable
+    strategy declares a DETERMINISTIC entry rule here, and every result reports which rule produced it.
+    What the backtest grades is therefore the rule plus the exit chain — never the model.
+
+    A strategy with no `backtest` block is reported "not backtestable" with the reason, never silently
+    skipped or given a default that flatters it.
+    """
+
+    entry_rule: Literal["signal_bar_close", "next_bar_open", "premarket_high_break",
+                        "opening_range_break", "prior_day_high_break"]
+    entry_offset_pct: float = Field(0.0, ge=0, le=5)     # trigger this far beyond the level
+    entry_window: str = "09:30-15:30"                    # ET; an entry may only trigger inside it
+    opening_range_minutes: int = Field(30, ge=1, le=120)
+    stop_rule: Literal["pattern_low", "atr_multiple", "percent", "entry_bar_low", "opening_range_opposite"] = "pattern_low"
+    stop_atr_multiple: float = Field(1.0, gt=0)
+    stop_pct: float = Field(2.0, gt=0)
+    stop_lookback_bars: int = Field(3, ge=1)
+    target_rule: Literal["r_multiple", "atr_multiple", "none"] = "r_multiple"
+    target_r: float = Field(2.0, gt=0)
+    target_atr_multiple: float = Field(1.0, gt=0)
+    bar_timeframe: Literal["1Min", "5Min", "15Min", "1Hour", "1Day"] = "5Min"
+    warmup_bars: int = Field(80, ge=0)                   # bars of context loaded before the window opens
+    max_trades_per_day: int = Field(1, ge=1)
+    max_symbols_per_day: int = Field(5, ge=1)            # the scanner caps the focus list; so does the replay
+    notes: str = ""
+
+
 # ---------- the strategy ----------
 
 class StrategyConfig(BaseModel):
@@ -164,6 +207,7 @@ class StrategyConfig(BaseModel):
     exit_logic: list[ExitStep] = Field(min_length=1)
     risk: Risk
     reentry: Reentry = Field(default_factory=Reentry)
+    backtest: BacktestSpec | None = None
     prompt_template_slug: str | None = None
     library_file: str
     notes: str = ""

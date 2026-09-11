@@ -93,7 +93,9 @@ def write_rows(*, day: dt.date, journal_rows: list[dict], fee_detail: dict[str, 
                                "detail": {"note": "SEC + TAF combined", **detail}})
         if row.get("spread_cost"):
             out.append(base | {"kind": "spread_cost", "amount": -abs(float(row["spread_cost"])),
-                               "detail": {"note": "fill vs quote midpoint at submit"}})
+                               "detail": {"note": "fill vs quote midpoint at submit — an attribution, "
+                                                  "not a second deduction: this cost is already inside "
+                                                  "pnl_net via the fill price"}})
 
         net = float(row.get("pnl_net") or 0.0)
         pnl_running = round(pnl_running + net, 4)

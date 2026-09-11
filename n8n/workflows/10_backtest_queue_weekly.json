@@ -1,0 +1,101 @@
+{
+  "name": "10 Backtest hypothesis queue Sun 11:00 ET",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 11 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000001",
+      "name": "Sun 11:00 ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "notes": "Two hours after workflow 07 writes the week's hypotheses, so the queue it grades is this week's. Plan section 20: a hypothesis becomes a backtest job, never a live change."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://engine:8000/backtest/queue/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "5"
+            },
+            {
+              "name": "days",
+              "value": "365"
+            },
+            {
+              "name": "notify",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 3600000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000002",
+      "name": "POST /backtest/queue/run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TradeHub Engine token"
+        }
+      },
+      "notes": "Grades every proposed hypothesis that carries a config diff: the same date range, the same universe and the same fill model, run once on the current config and once with the diff applied, compared on expectancy after costs. The row becomes validated or rejected and points at the backtest that decided it. Nothing is applied to a strategy - a validated hypothesis is evidence for a change the owner still has to approve. Long timeout: a year of scanner replay is minutes, not seconds, and the parquet cache makes the second run much faster than the first."
+    }
+  ],
+  "connections": {
+    "Sun 11:00 ET": {
+      "main": [
+        [
+          {
+            "node": "POST /backtest/queue/run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York",
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "phase-7"
+    }
+  ]
+}

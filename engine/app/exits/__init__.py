@@ -1,4 +1,4 @@
-"""Exit plugins (plan §9) — implemented in Phase 5 (synthetic stop, OCO) and Phase 7 (the rest).
+"""Exit plugins (plan §9) — all nine implemented in app/exits/plugins.py.
 
 Contract: an exit plugin is a small class with
     `initial(position, bars, **params) -> ExitOrder | None`   — stop/target to place at entry
@@ -54,4 +54,8 @@ def get(name: str) -> type:
     try:
         return _EXITS[name]
     except KeyError as e:
-        raise NotImplementedError(f"exit plugin '{name}' is registered but not implemented yet") from e
+        raise NotImplementedError(f"exit plugin '{name}' is registered but not implemented") from e
+
+
+# Implementations register themselves on import (kept at the bottom to avoid a circular import).
+from app.exits import plugins  # noqa: F401

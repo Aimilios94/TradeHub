@@ -241,3 +241,80 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
 59. **The briefing is reachable from Telegram** (`/guardian` + an optional question, workflow 08) since
     there is no dashboard until Phase 9. Non-`/guardian` messages are ignored by the workflow, and the
     engine independently refuses any chat that is not the configured owner.
+
+## 2026-09-11 — Phase 7
+
+60. **The backtester grades a RULE, not Hermes.** Live, an S1/S3 entry price comes from a Hermes plan.
+    A backtest cannot call Hermes and must not pretend to — replaying a model's judgment against data
+    it can now see is not a measurement. So every backtestable strategy carries a `backtest` block
+    (`BacktestSpec`, migration 0006) declaring a deterministic entry rule, stop rule and target rule,
+    and every result reports which rule produced it. S1 = a buy-stop 0.1% above the pre-market high;
+    S3 = a 15-minute opening-range break; S4–S8 = the next bar's open after the trigger. What the
+    backtest grades is therefore the rule plus the exit chain. **S2 has no block and is reported "not
+    backtestable" with the reason** — a briefing has no entry, stop, target or size; there is nothing
+    to replay, and saying so is better than a silent skip.
+61. **The semi_auto strategies fill at the NEXT bar's open, not the trigger bar's close.** S4–S8 require
+    the owner to confirm the channel visually before tapping deploy, and that cannot happen inside the
+    bar that fired. Paying one bar of slippage is the honest model of a human in the loop.
+62. **The four countermeasures (plan §13), each with a test that fails when it is removed:**
+    1. *Survivorship*: the replay universe includes Alpaca's INACTIVE assets, which is where the
+       delisted low-floats are, and the cap keeps the delisted share intact rather than taking the
+       first N alphabetically. Every run reports `delisted_pct`; a screener universe that comes back
+       under 1% delisted is flagged `too_clean` **in words** — that is not a clean result, it is a
+       missing-data result.
+    2. *Feed mismatch*: relative-volume thresholds are rescaled by the median IEX/SIP factor from
+       `v_feed_calibration_30d` before the replay uses them. No calibration logged yet → the factor is
+       reported unknown and the threshold is left ALONE, never quietly assumed to be 1.0.
+    3. *Fill realism*: `app/backtest/fills.py`. A passive limit fills only when volume traded THROUGH
+       the level (§31's queue rule), never on a touch; a stop fills through the level and a gap fills at
+       the open, not at the stop; fills are capped at 10% of the bar's volume; a bar that touched both
+       the stop and the target books the STOP. Spread is estimated from a price-band table because
+       historical bars carry no quotes, and the parameters ship in `app_settings.backtest` and are
+       reported with every result.
+    4. *Overfitting*: minimum sample sizes, and a walk-forward split that flags an edge living in only
+       one half of the range.
+63. **S4 and S8 could never have fired, and the backtester is how we found out.** Both listed
+    `stoch_quad_extreme` (all four bands UNDER 20) and `stoch_divergence` (trigger = the 9-3 turning UP
+    THROUGH 20) as same-bar hard gates. Those are mutually exclusive by construction: on 68 sessions of
+    SPY the quad passed on 917 bars and the trigger on 422, and the two coincided on **zero**. The
+    strategy's own `stages` always said they were different moments. `Condition.within_bars` now makes
+    a condition a SETUP — satisfied if it held within the last N bars — and S4 uses 30 bars (2.5h on
+    5-min), S8 twelve (~2 sessions on 60-min). A config that can never fire looks exactly like a
+    strategy that never triggers, which is why it survived four phases.
+64. **The divergence detector confirms only its FIRST leg.** Requiring both swing lows to be confirmed
+    swing points costs `swing_lookback` bars on the right-hand side of each, by which time the 9-3 has
+    long since crossed 20 — so the trigger was unreachable and the detector would have returned False
+    forever while looking healthy. It now checks two shapes: the last two confirmed swings (the textbook
+    double bottom), and the last confirmed swing against the RUNNING low since it (what a trader is
+    looking at while the second low forms). Both are causal.
+65. **The live journal was deducting the spread twice.** `pnl_gross` is computed from actual fill
+    prices, which already contain the spread paid; `spread_cost` measures the same money again against
+    the midpoint at submit, and `build_row` subtracted it a second time. Net P&L was understated by the
+    spread on every trade, which would have made backtest and paper numbers non-comparable — precisely
+    the comparison §13's promotion workflow rests on. Fixed: `net = gross - fees`, and `spread_cost`
+    is now labelled an attribution in the ledger row. Found while defining the backtester's P&L
+    convention; it had no test, which is why it survived Phase 6.
+66. **A hypothesis's config diff merges key by key.** A shallow merge would replace a whole `risk`
+    block, so a proposal that only tightens `risk_per_trade_pct` would silently reset `max_concurrent`
+    and `daily_loss_limit_r` to their defaults — loosening limits the proposal never mentioned, which
+    §20 forbids. Lists still replace wholesale: an exit chain is ordered, and merging it item by item
+    would build a chain nobody proposed.
+67. **`/backtest/promote` will not flip a status without evidence, and never to `live`.** It requires a
+    `backtests` row belonging to that strategy whose verdict is `pass`; anything else is refused with
+    the unmet and unanswered checks named. Live promotion is refused outright — Phase 8's paper month
+    plus the separate, owner-approved change that lifts the in-code lockout (#37).
+68. **Unknown is never green, in the verdict too.** An unanswered check (no A/B comparison, no equity
+    to measure drawdown against) makes the verdict `inconclusive`, never `pass`. Too few trades beats
+    everything: below `promotion_criteria.min_trades_*` the verdict is `inconclusive` even when the
+    numbers look bad, because §20 forbids a conclusion on a short sample — and that includes the
+    conclusion "this fails". Win rate is computed, displayed, and consulted by nothing.
+69. **Deep history is parquet on disk, per plan §5.** `data/parquet/bars/<timeframe>/<feed>/` holds one
+    file per symbol for range access, plus `_days/<date>.parquet` for the scanner replay's opposite
+    access pattern (every candidate, one session). Supabase keeps its rolling 90 days. The stochastic
+    bands a config asks for are precomputed once per symbol-day — every window is rolling, so slicing
+    the session frame is identical to recomputing on the prefix, with no lookahead; it cut an S4 run
+    from 107 s to 45 s.
+70. **First real result (2026-09-11):** S4 over 2026-06-01→09-05 on SPY/QQQ produced 88 trades, a 33%
+    win rate and negative expectancy, verdict **inconclusive** — 88 is below the 100 the style needs.
+    The PDF's claimed ~95% win rate met measured data, which is exactly what §7 said would happen and
+    why win rate is never the gate.

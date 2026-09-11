@@ -41,11 +41,27 @@ def test_register_rejects_unknown_names():
         exits.register("not_an_exit")
 
 
-def test_registered_but_unimplemented_raise_not_implemented():
-    assert set(detectors.implemented()) == {"adv", "atr", "distance_to_level_atr", "float_shares", "gap_pct", "nbar_high_low", "premarket_high_low", "prior_day_levels", "relative_volume_premarket"}  # Phase 2 subset
-    assert exits.implemented() == []
+def test_registry_and_code_agree():
+    """Phase 7 completed the registry. The invariant from here on is that the two never drift:
+    a name marked `implemented` must resolve to code, and code must never register an unknown name."""
+    assert set(detectors.implemented()) == set(DETECTOR_NAMES)
+    assert set(exits.implemented()) == set(EXIT_NAMES)
+    for p in ALL_PLUGINS:
+        assert p["status"] == "implemented", f"{p['name']} is still marked {p['status']}"
+        getter = detectors.get if p["kind"] == "detector" else exits.get
+        assert getter(p["name"]) is not None
+
+
+def test_an_unregistered_name_is_refused_at_import_time():
+    with pytest.raises(KeyError):
+        detectors.register("not_in_the_registry")
+    with pytest.raises(KeyError):
+        exits.register("not_in_the_registry")
+
+
+def test_get_on_an_unknown_name_says_so():
     with pytest.raises(NotImplementedError):
+        detectors._DETECTORS.pop("ema")
         detectors.get("ema")
-    with pytest.raises(NotImplementedError):
-        exits.get("bracket_oco")
-    assert "ema" in DETECTOR_NAMES and "bracket_oco" in EXIT_NAMES
+    from app.detectors import indicators
+    detectors._DETECTORS["ema"] = indicators.ema

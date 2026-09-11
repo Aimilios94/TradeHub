@@ -1,4 +1,6 @@
-"""Detectors / indicators (plan §9, §27) — Phase 2 implements the price/volume/level subset (basic.py); Phase 7 the rest.
+"""Detectors / indicators (plan §9, §27) — all 23 implemented: basic.py (price/volume/levels, Phase 2),
+indicators.py (moving averages + the HPS stochastic family, Phase 7), structure.py (opening range,
+bases, patterns, sector RS, CVD, volume profile, Phase 7).
 
 Contract: every detector is a pure function `run(bars: pd.DataFrame, **params) -> DetectorResult`
 where `bars` is an OHLCV frame indexed by ET timestamp for one symbol (plus context frames
@@ -51,8 +53,12 @@ def get(name: str) -> DetectorFn:
     try:
         return _DETECTORS[name]
     except KeyError as e:
-        raise NotImplementedError(f"detector '{name}' is registered but not implemented yet (Phase 7)") from e
+        raise NotImplementedError(f"detector '{name}' is registered but not implemented") from e
 
 
-# Phase 2 implementations register themselves on import (kept at the bottom to avoid a circular import).
-from app.detectors import basic  # noqa: F401
+# Implementations register themselves on import (kept at the bottom to avoid a circular import).
+from app.detectors import (
+    basic,  # noqa: F401
+    indicators,  # noqa: F401
+    structure,  # noqa: F401
+)

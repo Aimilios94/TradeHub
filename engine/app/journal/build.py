@@ -212,7 +212,12 @@ def build_row(trip: RoundTrip, day: dt.date, *, plan: dict | None, orders: list[
               fees: float, trade_number: int) -> dict:
     gross = trip.pnl_gross() or 0.0
     spread = spread_cost(trip, orders)
-    net = round(gross - fees - spread, 4)
+    # `gross` comes from the ACTUAL fill prices, so the spread you paid is already inside it.
+    # `spread_cost` is an attribution — how much of that gross the spread ate, measured against the
+    # midpoint at submit — and must NOT be deducted again. (Fixed in Phase 7: it was, which understated
+    # every net figure by the spread and made backtest and journal numbers non-comparable, exactly the
+    # comparison plan §13's promotion workflow depends on.)
+    net = round(gross - fees, 4)
     planned_stop = plan.get("stop") if plan else None
     ev = (plan or {}).get("evidence") or {}
     catalyst = ((ev.get("catalysts") or [{}])[0] or {}).get("catalyst_type") if ev.get("catalysts") else None

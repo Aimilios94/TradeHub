@@ -12,7 +12,7 @@ owner-approved execution → journal → weekly self-review. Backend-first; the 
 3. Run `engine\.venv\Scripts\python scripts\check_env.py` to confirm credentials before touching
    anything that talks to a service.
 
-Never redo a completed phase. Never re-apply migrations `0001`–`0005` (all applied). `0002_seed.sql` is
+Never redo a completed phase. Never re-apply migrations `0001`–`0006` (all applied). `0002_seed.sql` is
 **generated** from `engine/app/registry.py` + `engine/app/seed/*.py` + `prompt-library/hermes-core/*.md`
 by `engine/scripts/gen_seed.py` — edit the source and regenerate; a pytest fails when it is stale. Apply
 only the statement you changed rather than re-running the whole seed, so no other setting is overwritten.
@@ -30,7 +30,7 @@ Single user in Portugal, **not a developer**. He runs the accounts and installs;
 
 ## Architecture in one paragraph
 
-Thin n8n, fat Python (decision #1). n8n only schedules, alerts and receives webhooks — nine workflows in
+Thin n8n, fat Python (decision #1). n8n only schedules, alerts and receives webhooks — ten workflows in
 `n8n/workflows/`, all ET. Every pipeline step is a FastAPI endpoint in `engine/app/<module>/router.py`.
 Supabase holds all state. Ollama (`hermes3:8b`) runs natively on the host for the free, high-volume local
 tier; OpenRouter (Hermes 70B/405B) does judgment. Docker runs `engine`, `n8n` and `monitor`.
@@ -47,10 +47,18 @@ tier; OpenRouter (Hermes 70B/405B) does judgment. Docker runs `engine`, `n8n` an
 - **The Guardian may be tightened, never loosened.** A strategy's risk block can lower a global limit; it
   can never raise one. The weekly review discards any proposal that would.
 - **Hermes proposes, the backtester disposes, the database remembers.** Nothing is auto-applied to a
-  strategy. Hypotheses wait for a backtest and the owner's approval.
+  strategy. Hypotheses wait for a backtest and the owner's approval. `/backtest/promote` refuses any
+  flip without a `backtests` row whose verdict is `pass`, and refuses `live` outright.
+- **A backtest may not flatter the strategy.** The fill model is pessimistic by construction (decision
+  #62): a limit fills only on volume traded THROUGH the level, a bar touching both stop and target
+  books the stop, a gap fills at the open. Loosening any of those needs its own decision entry.
 
 ## Traps that have already cost time
 
+- **A hard gate that can never be true looks exactly like a strategy that never triggers.** S4 and S8
+  demanded the stochastic quad UNDER 20 and the 9-3 crossing UP THROUGH 20 on the same bar; the pair is
+  mutually exclusive and produced zero signals for four phases (decision #63). `Condition.within_bars`
+  expresses a setup that happened recently. When a config yields nothing, suspect the config.
 - **Every prompt must be shown its own `output_schema`** (`llm.schema_contract`). Without it hosted models
   invent a plausible shape and 100% of answers fail validation.
 - **Alpaca accepts a pre-market stop and never triggers it.** Silent acceptance, not rejection, is the
@@ -77,20 +85,23 @@ installer's source copy; `skills-lock.json` pins the versions. Update with `npx 
   A dependency of the skill below; not usually invoked alone.
 - **`improve-codebase-architecture`** — scans for shallow modules and proposes refactors, as an HTML
   report. `disable-model-invocation: true`, so only the owner starts it.
-  **DO NOT run this until Phase 7 is finished** (owner's decision, 2026-09-11). Phases 0–6.5 are working,
-  tested and committed; the architecture review is for after the backtester lands, not for code we are
-  about to build on. When it does run, note that it looks for `CONTEXT.md` and `docs/adr/`, which this
+  Phase 7 finished on 2026-09-11, so the owner's hold on it has lifted and it can now be run. When it does run, note that it looks for `CONTEXT.md` and `docs/adr/`, which this
   repo does not have — `CLAUDE.md` and `docs/DECISIONS.md` are the equivalents.
 
 ## Commands
 
 ```powershell
 cd engine
-.\.venv\Scripts\python -m pytest -q          # 238 tests, all offline
+.\.venv\Scripts\python -m pytest -q          # 349 tests, all offline
 .\.venv\Scripts\python -m ruff check app tests
 .\.venv\Scripts\python scripts\gen_seed.py   # after editing seed sources
 .\.venv\Scripts\python scripts\check_env.py  # credential readiness, never prints secrets
+.\.venv\Scripts\python scripts\apply_sql.py ..\supabase\migrations\0006_backtest_spec.sql
+.\.venv\Scripts\python scripts\apply_sql.py --grep "insert into strategy_configs" ..\supabase\migrations\0002_seed.sql
 ```
+
+`apply_sql.py` exists so the seed rule above is a command: `--grep` applies only the statements that
+changed instead of overwriting every `app_settings` row. Add `--dry-run` to see what would run.
 
 ```bash
 docker compose up -d --build engine   # required after any engine code change

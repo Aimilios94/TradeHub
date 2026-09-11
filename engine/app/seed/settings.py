@@ -129,6 +129,38 @@ APP_SETTINGS: dict[str, dict] = {
             "never decides a rule changed and never edits the doc (docs/DECISIONS.md #55)."
         ),
     },
+    "backtest": {
+        "value": {
+            "fill_model": {
+                "spread_model": "band",
+                "spread_band_pct": {"2": 1.20, "5": 0.60, "10": 0.30, "50": 0.10, "inf": 0.05},
+                "slippage_ticks": 1,
+                "tick_size": 0.01,
+                "stop_slippage_pct": 0.15,
+                "limit_requires_through": True,
+                "queue_volume_multiple": 2.0,
+                "max_participation_pct": 10.0,
+                "commission_per_share": 0.0,
+                "apply_regulatory_fees": True,
+                "allow_partial_fills": True,
+            },
+            "default_equity": 25000.0,
+            "default_universe_cap": 1500,
+            "include_inactive_symbols": True,
+            "walk_forward_splits": 2,
+        },
+        "description": (
+            "Plan §13 countermeasure 3 — the fill model, stated rather than assumed. Historical Alpaca "
+            "bars carry no quotes, so the spread is ESTIMATED from `spread_band_pct` (a $3 low-float "
+            "name is not a $300 mega-cap) and every result reports the parameters it used. "
+            "`limit_requires_through` + `queue_volume_multiple` are §31's queue rule: a passive limit "
+            "fills only when volume traded THROUGH the level, never on a touch — without it a backtest "
+            "fills every losing limit and every winning one, which is the asymmetry that turns a "
+            "fake-profitable result negative. `include_inactive_symbols` keeps delisted names in the "
+            "replay universe (countermeasure 1): a low-float universe with no delistings in it is not "
+            "clean, it is missing the stocks that went to zero."
+        ),
+    },
     "failure_policy": {
         "value": {
             "broker_unreachable": "block entries, telegram alert, red banner, synthetic monitor fallback, escalate",

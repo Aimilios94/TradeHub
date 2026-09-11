@@ -78,10 +78,14 @@ def _agg(df: pd.DataFrame) -> dict:
         # the largest WIN must come from the winners, not from "the least bad loss"
         "largest_win": round(float(wins.max()), 4) if len(wins) else None,
         "largest_loss": round(float(losses.min()), 4) if len(losses) else None,
-        # expectancy in dollars per trade, AFTER fees and spread (they are already inside pnl_net)
+        # expectancy in dollars per trade, AFTER every cost: fees are deducted in pnl_net and the
+        # spread is already inside the fill prices that produced pnl_gross
         "expectancy": round(float(net.mean()), 4) if len(net) else None,
         "expectancy_r": round(float(r.mean()), 3) if len(r) else None,
-        "profit_factor": round(gross_win / gross_loss, 3) if gross_loss > 0 else (None if not gross_win else float("inf")),
+        # None, never inf: a sample with no losing trades has no profit factor, and `float("inf")` is
+        # not JSON — it silently killed a `backtests` write and would kill a weekly-review prompt the
+        # first flawless week. `losers` below already says why it is None.
+        "profit_factor": round(gross_win / gross_loss, 3) if gross_loss > 0 else None,
         "total_r": round(float(r.sum()), 3) if len(r) else None,
         "fees": round(float(df["fees"].fillna(0).sum()), 4),
         "spread_cost": round(float(df["spread_cost"].fillna(0).sum()), 4),
