@@ -19,7 +19,7 @@ engine/            FastAPI service — app/{registry,models,config,db,auth,notif
 supabase/migrations/   0001_core_schema.sql · 0002_seed.sql (GENERATED) · 0003_premarket_profile.sql · 0004_symbol_stats.sql · 0005_briefings.sql · 0006_backtest_spec.sql
 supabase/functions/    market-proxy (Deno Edge Function — the frontend's only market-data door)
 prompt-library/        strategies/ frameworks/ hermes-core/ hermes-extensions/ extension-modules/ tests/ _originals/
-n8n/workflows/         exported workflow JSON — 10 workflows, one per scheduled job (see its own README)
+n8n/workflows/         exported workflow JSON — 11 workflows, one per scheduled job (see its own README)
 data/parquet/          deep historical bars for the backtester (gitignored; shared by the host and the engine container)
 docker-compose.yml     engine + n8n + monitor
 .env.example           every key the project will ever need
@@ -91,8 +91,8 @@ three gotchas (batch tag collision, Git Bash path mangling, imports arrive inact
 | 6 | `/journal/eod` (FIFO round trips + Guardian Layer-2 ledger), `/analytics/report` (§14), `/review/weekly` (templates 05+06 → `hypotheses`), degradation trigger; n8n crons 06/07 | **done 2026-09-10** (proposals only — nothing is auto-applied) |
 | 6.5 | `/guardian/briefing` (Layer 3, plain-language state report, reachable as `/guardian` in Telegram) + `/guardian/rules-check` (monthly source-page freshness → `compliance_events`); `docs/BROKER_RULES.md`; n8n crons 08/09 | **done 2026-09-10** |
 | 7 | `/backtest/*`: scanner-universe replay with the four §13 countermeasures (survivorship coverage, IEX↔SIP calibration, an explicit pessimistic fill model, min-sample + walk-forward guards); the remaining 23 detectors and 9 exit plugins, so the registry is fully implemented; per-strategy `BacktestSpec` (migration 0006); parquet bar cache; hypothesis grading + `/backtest/promote`; n8n cron 10 | **done 2026-09-11** (baselines recorded for S4–S8; **S1 and S3 full baselines still to run** — see below. Nothing is auto-applied; promotion needs a passing backtest and live is still refused in code) |
-| 8 | `app/ops/*`: retry + per-provider rate-limit guards (reads only — an order submission is never auto-retried), §33 failure policy as blocking checks in front of the Guardian gate, one central failure recorder, the Guardian fire drill, the measured §17 go-live scorecard, nightly backup + checksum-verified restore, `scripts/onboarding.py`; n8n cron 11 | **hardening done 2026-09-11** — the ≥ 4-week paper month is calendar time and starts on the owner's word. Cloudflare/Tailscale tunnel deferred to Phase 9, when the UI needs it |
-| 9 | UI (React + Tailwind against the mockup) | |
+| 8 | `app/ops/*`: retry + per-provider rate-limit guards (reads only — an order submission is never auto-retried), §33 failure policy as blocking checks in front of the Guardian gate, one central failure recorder, the Guardian fire drill, the measured §17 go-live scorecard, nightly backup + checksum-verified restore, `scripts/onboarding.py`; n8n cron 11 | **hardening done 2026-09-11**; paper month running since **2026-09-14** (day zero stamped on a weekday deliberately — decision #96). Cloudflare/Tailscale tunnel deferred to Phase 9, when the UI needs it |
+| 9 | UI (React + Tailwind against the mockup) | **next** — runs alongside the paper month |
 | E1→E2→E5→FL→E3→E4 | extension modules, after the paper month | |
 
 ## Backtest baselines (first measured, 2026-09-11)

@@ -30,7 +30,7 @@ Single user in Portugal, **not a developer**. He runs the accounts and installs;
 
 ## Architecture in one paragraph
 
-Thin n8n, fat Python (decision #1). n8n only schedules, alerts and receives webhooks — ten workflows in
+Thin n8n, fat Python (decision #1). n8n only schedules, alerts and receives webhooks — eleven workflows in
 `n8n/workflows/`, all ET. Every pipeline step is a FastAPI endpoint in `engine/app/<module>/router.py`.
 Supabase holds all state. Ollama (`hermes3:8b`) runs natively on the host for the free, high-volume local
 tier; OpenRouter (Hermes 70B/405B) does judgment. Docker runs `engine`, `n8n` and `monitor`.
