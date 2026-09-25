@@ -216,21 +216,36 @@ it reacts, so it stays unverified until it fires once.
    passed" were being displayed but never counted. Fixed. Backtests recorded before today still show 0
    there; the funnel figures next to them were always correct.
 
-## 🕒 Phase 8 (part 2) — The paper month *(running)*
-**Day zero is Monday 14 September 2026** — stamped on a weekday on purpose, because a week that starts
-on a Saturday holds only five trading days and one market holiday would break the streak and reset the
-clock.
+## 🕒 Phase 8 (part 2) — The paper month *(running — day 11 of 28)*
+Day zero was Monday 14 September. **The engine side is working. The problem is the machine being asleep.**
 
-Four straight weeks from there, and at least 20 trades recorded. What it needs from you:
+**What is going well:** the scanner has run on every day the PC was awake, and found real candidates each
+time — 450 to 660 stocks measured per morning, 54 to 92 passing the filters. Week 1 counted as complete.
 
-- **Leave the PC and Docker on for the 08:00 ET scan.** A week only counts if the scan actually ran on
-  at least four of its days. A week where the machine was off does not count, and the streak restarts.
-- **Activate workflow 11 in n8n** (localhost:5678) — without it there is no nightly backup and no Sunday
-  scorecard. The other ten are already running.
-- **Tap Deploy on real signals.** The 20 trades and the deploy speed can only come from your taps;
-  nothing about waiting produces them.
+**What is not:**
 
-You will get the scorecard in plain English every Sunday evening. Progress any time: `/ops/acceptance`.
+| | |
+|---|---|
+| **Three mornings missed** | 14th, 21st and 24th September had no scan. The PC was not awake at 08:00 New York = 13:00 your time. A week needs scans on 4 of its days or the four-week streak resets to zero. |
+| **Trade plans only written 3 days out of 8** | The plans that were written came at 13:08, 10:50 and 00:22 New York time instead of 08:00 — that is the computer waking up and running a job it had already missed. |
+| **One signal reached you, and it is still waiting** | IONQ on 23 September, still sitting unanswered — neither deployed nor cancelled. |
+| **0 of the 20 trades** | Follows directly from the line above. Twenty deployed-and-closed trades is a hard requirement and no amount of waiting creates them. |
+| **The nightly backup never ran** | Workflow 11 was never switched on. There has been exactly one backup, the manual one from 11 September. |
+
+**Three things to fix it, all on your side:**
+
+1. **Stop the PC sleeping.** Windows power settings → never sleep, never hibernate. Check Docker Desktop
+   is set to start with Windows. It has to be awake at **13:00 Portuguese time** every weekday.
+2. **Switch on workflow 11** at localhost:5678 — the nightly backup and the Sunday report.
+3. **Answer the signals.** Deploy or Cancel, either is fine — but leaving one sitting means the month
+   makes no progress.
+
+If the streak has already broken, we restart the clock on a Monday and lose nothing but time.
+
+**Fixed on 25 September:** the stop-watcher was raising a red alert every time the internet hiccuped for
+a second — seven times in eleven days, each one healed by itself thirty seconds later. It now retries
+quietly and only shouts if the problem lasts, **or if you have a position open**, in which case it still
+shouts immediately, because then it is the only thing protecting you.
 
 ## ⬜ Phase 9 — User interface
 The dashboard. Deliberately last, after the engine has proven itself.
@@ -245,9 +260,10 @@ Also available: `/improve-codebase-architecture` — it scans the code for parts
 tidy-ups, as a visual report. It was deliberately saved until the backtester was done — it is done, so
 this can run now. `/diagnosing-bugs` is installed too and can be used any time something breaks.
 
-### Waiting on you
-- **Activate workflow 11** in n8n (localhost:5678) — the nightly backup and Sunday scorecard.
-- **Keep the machine on at 08:00 ET** for the four weeks, and tap Deploy on the signals you like.
+### Waiting on you — these three are now the only things holding the paper month up
+1. **Stop the PC sleeping** and let Docker start with Windows. Awake at 13:00 Portuguese time, weekdays.
+2. **Activate workflow 11** in n8n (localhost:5678) — still off; the nightly backup has never run.
+3. **Answer the signals** — Deploy or Cancel. One has been waiting since 23 September.
 - **Your own go-live steps**, whenever you get to them: fund the account modestly, file the W-8BEN with
   Alpaca, pick one small first strategy, and confirm the tax treatment with an accountant. The scorecard
   tracks these as yours; the engine will never tick them off for you.

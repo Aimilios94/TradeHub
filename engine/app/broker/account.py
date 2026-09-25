@@ -50,13 +50,22 @@ class AccountSnapshot:
 
 
 def snapshot() -> AccountSnapshot:
-    """Equity, buying power and open positions. Never raises."""
+    """Equity, buying power and open positions. Never raises.
+
+    Retried (Phase 8, decision #79): this is a GET, so it is idempotent, and it is the most frequently
+    made external call in the system — the stop monitor runs it every 30 seconds, and every Guardian
+    gate evaluation runs it once. Without a retry a single dropped keep-alive or a momentary DNS
+    failure became a recorded `failure` row at red severity; over the first eleven days of the paper
+    month that produced seven of them, every one self-healed on the next cycle (decision #97).
+    """
+    from app.ops import resilience
+
     try:
         client = _trading_client()
-        acct = client.get_account()
-        positions = client.get_all_positions()
+        acct = resilience.call("alpaca_trading", client.get_account, what="get_account")
+        positions = resilience.call("alpaca_trading", client.get_all_positions, what="get_all_positions")
     except Exception as e:  # noqa: BLE001
-        log.warning("broker snapshot failed: %s", e)
+        log.warning("broker snapshot failed after retries: %s", e)
         return AccountSnapshot(ok=False, error=f"{type(e).__name__}: {str(e)[:200]}")
 
     def num(v):

@@ -38,6 +38,9 @@ log = logging.getLogger(__name__)
 REFRESH_SECONDS = int(os.getenv("MONITOR_REFRESH_SECONDS", "30"))
 SLIP_THROUGH_PCT = float(os.getenv("MONITOR_SLIP_THROUGH_PCT", "0.5"))   # how far through the stop to price
 HEARTBEAT_MINUTES = int(os.getenv("MONITOR_HEARTBEAT_MINUTES", "0"))     # 0 = no heartbeat message
+# How many consecutive failed refreshes before an outage with NOTHING open becomes an incident. With a
+# position open the first failure is loud regardless — see `_note_refresh_failure`.
+ALERT_AFTER_FAILURES = int(os.getenv("MONITOR_ALERT_AFTER_FAILURES", "3"))
 
 
 class Watch:
@@ -58,15 +61,23 @@ class Watch:
         return f"Watch({self.symbol} {'long' if self.long else 'short'} {self.qty} stop {self.stop})"
 
 
+class WatchlistUnavailable(RuntimeError):
+    """The broker could not be read, so what is open is UNKNOWN — which is not the same as nothing."""
+
+
 def build_watchlist(day: dt.date | None = None) -> dict[str, Watch]:
-    """Open positions that have a stop to enforce today. Positions without one are reported, not guessed."""
+    """Open positions that have a stop to enforce today. Positions without one are reported, not guessed.
+
+    Raises `WatchlistUnavailable` when the broker cannot be read. It deliberately does not decide how
+    loud that is: one failed poll that recovers 30 seconds later is the network being a network, while
+    the same failure with a position open is an unprotected position. Only the caller knows which,
+    because only the caller remembers the previous cycle (decision #97).
+    """
     day = day or alpaca.now_et().date()
     acct = broker_account.snapshot()
     if not acct.ok:
         log.error("broker unreachable while building the watchlist: %s", acct.error)
-        guardian.log_event(kind="failure", verdict="red",
-                           reason=f"synthetic stop monitor cannot read positions: {acct.error}")
-        return {}
+        raise WatchlistUnavailable(acct.error or "broker unreachable")
     if not acct.positions:
         return {}
 
@@ -114,6 +125,8 @@ class SyntheticStopMonitor:
         self._fired: set[str] = set()
         self._stream = None
         self._subscribed: set[str] = set()
+        self._consecutive_failures = 0
+        self._outage_alerted = False
 
     # ---------- firing ----------
 
@@ -196,14 +209,61 @@ class SyntheticStopMonitor:
         self._stream = StockDataStream(s.alpaca_paper_key_id, s.alpaca_paper_secret_key)
         return self._stream
 
+    def _note_refresh_failure(self, error: str) -> None:
+        """Decide whether this failed poll is an incident. Runs in the refresh thread.
+
+        Three cases, and the distinction is the whole point:
+          * a position was being watched -> LOUD on the first failure. It is unprotected right now, and
+            pre-market a broker stop does nothing (BROKER_RULES R1), so the watcher is all there is.
+          * nothing was being watched -> only after ALERT_AFTER_FAILURES consecutive cycles, because a
+            single dropped connection that heals on the next poll handled itself. Seven such blips in
+            the first eleven days of the paper month each raised a red `failure` row and a Telegram
+            ping, which is the alert-nobody-reads problem this file's dedupe exists to prevent.
+        The heartbeat is written on EVERY failure either way, so `/ops/preflight` still sees the
+        outage within one cycle and still goes red pre-market. Only the incident row is debounced.
+        """
+        self._consecutive_failures += 1
+        watching = len(self._watch)
+        if watching:
+            reason = (f"synthetic stop monitor cannot read positions while watching {watching}: "
+                      f"{error} — those positions are UNPROTECTED until it recovers")
+        elif self._consecutive_failures >= ALERT_AFTER_FAILURES:
+            reason = (f"synthetic stop monitor cannot read positions for "
+                      f"{self._consecutive_failures} consecutive refreshes "
+                      f"(~{self._consecutive_failures * REFRESH_SECONDS}s): {error}")
+        else:
+            log.warning("watchlist refresh failed (%d of %d before alerting): %s",
+                        self._consecutive_failures, ALERT_AFTER_FAILURES, error)
+            return
+        if self._outage_alerted and not watching:
+            return                      # already reported this outage; do not re-ping every cycle
+        self._outage_alerted = True
+        from app.ops import failures
+
+        failures.failure("failure", reason, key="monitor_broker_read",
+                         severity="critical" if watching else "error",
+                         detail={"watching": watching, "consecutive": self._consecutive_failures})
+
+    def _note_refresh_recovery(self) -> None:
+        if self._outage_alerted:
+            from app.ops import failures
+
+            failures.failure("failure", f"synthetic stop monitor can read positions again after "
+                                        f"{self._consecutive_failures} failed refresh(es)",
+                             key="monitor_broker_read", severity="info")
+        self._consecutive_failures = 0
+        self._outage_alerted = False
+
     async def refresh(self) -> None:
         """Reload the watch list and subscribe to anything new."""
         try:
             fresh = await asyncio.to_thread(build_watchlist)
         except Exception as e:  # noqa: BLE001
-            log.error("watchlist refresh failed: %s", e)
-            await asyncio.to_thread(write_heartbeat, 0, f"watchlist refresh failed: {str(e)[:140]}")
+            error = f"{type(e).__name__}: {str(e)[:160]}"
+            await asyncio.to_thread(self._note_refresh_failure, error)
+            await asyncio.to_thread(write_heartbeat, len(self._watch), f"refresh failed: {error}")
             return
+        self._note_refresh_recovery()
         self._watch = fresh
         await asyncio.to_thread(write_heartbeat, len(fresh), "")
         for symbol in set(self._watch) - self._fired:

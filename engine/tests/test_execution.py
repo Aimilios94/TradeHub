@@ -454,12 +454,51 @@ def test_a_position_with_no_stop_is_not_watched(monkeypatch):
     assert monitor.build_watchlist(dt.date(2026, 9, 10)) == {}
 
 
-def test_watchlist_is_empty_and_loud_when_the_broker_is_down(monkeypatch):
+def test_watchlist_refuses_to_report_an_unreadable_broker_as_nothing_open(monkeypatch):
+    """Returning {} would say "no positions" when the truth is "we do not know" — and the monitor would
+    quietly stop watching. It raises instead, and the caller decides how loud that is (decision #97)."""
     monkeypatch.setattr(monitor.broker_account, "snapshot", lambda: DOWN)
-    events = []
-    monkeypatch.setattr(monitor.guardian, "log_event", lambda **kw: events.append(kw))
-    assert monitor.build_watchlist(dt.date(2026, 9, 10)) == {}
-    assert events and events[0]["verdict"] == "red"
+    with pytest.raises(monitor.WatchlistUnavailable):
+        monitor.build_watchlist(dt.date(2026, 9, 10))
+
+
+def test_one_failed_poll_with_nothing_open_is_not_an_incident(monkeypatch):
+    """Seven of these in the paper month's first eleven days, each healed on the next 30s cycle, and
+    each raised a red row plus a Telegram ping — which is what blocked §17 criterion 2."""
+    raised = []
+    monkeypatch.setattr(monitor, "ALERT_AFTER_FAILURES", 3)
+    monkeypatch.setattr("app.ops.failures.failure",
+                        lambda kind, reason, **kw: raised.append((reason, kw.get("severity"))))
+    m = monitor.SyntheticStopMonitor()
+
+    m._note_refresh_failure("ConnectionError: connection aborted")
+    m._note_refresh_failure("ConnectionError: connection aborted")
+    assert raised == [], "a blip that heals on the next poll handled itself"
+
+    m._note_refresh_failure("ConnectionError: connection aborted")
+    assert len(raised) == 1 and raised[0][1] == "error"
+    assert "3 consecutive" in raised[0][0]
+
+    m._note_refresh_failure("still down")
+    assert len(raised) == 1, "one outage is one incident, not one per cycle"
+
+    m._note_refresh_recovery()
+    assert len(raised) == 2 and raised[1][1] == "info" and "again" in raised[1][0]
+
+
+def test_a_failure_while_a_position_is_open_is_loud_immediately(monkeypatch):
+    """The debounce must never cover an unprotected position: pre-market the broker's own stop does
+    nothing (BROKER_RULES R1), so this watcher is the only protection there is."""
+    raised = []
+    monkeypatch.setattr(monitor, "ALERT_AFTER_FAILURES", 3)
+    monkeypatch.setattr("app.ops.failures.failure",
+                        lambda kind, reason, **kw: raised.append((reason, kw.get("severity"))))
+    m = monitor.SyntheticStopMonitor()
+    m._watch = {"AAPL": monitor.Watch("AAPL", 10, True, 99.0, "sig-1")}
+
+    m._note_refresh_failure("ConnectionError: connection aborted")
+    assert len(raised) == 1, "an open position gets no grace period"
+    assert raised[0][1] == "critical" and "UNPROTECTED" in raised[0][0]
 
 
 def _sink_client(sink: list):

@@ -5,6 +5,8 @@ owner-approved execution → journal → weekly self-review. Backend-first; the 
 
 ## Before doing anything
 
+0. Read `docs/HANDOVER.md` — where the build actually stands right now, what is running, what is
+   blocked and on whom. It is the file to update at the end of a working session.
 1. Read `docs/DECISIONS.md` — numbered decisions recording **why** the build deviates from the spec.
    The spec (`tradehub_implementation_plan.md`) is the design authority; DECISIONS.md is what was
    actually built and what was learned the hard way.
@@ -96,7 +98,7 @@ installer's source copy; `skills-lock.json` pins the versions. Update with `npx 
 
 ```powershell
 cd engine
-.\.venv\Scripts\python -m pytest -q          # 391 tests, all offline
+.\.venv\Scripts\python -m pytest -q          # 393 tests, all offline
 .\.venv\Scripts\python -m ruff check app tests
 .\.venv\Scripts\python scripts\gen_seed.py   # after editing seed sources
 .\.venv\Scripts\python scripts\check_env.py  # credential readiness, never prints secrets

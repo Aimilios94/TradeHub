@@ -506,3 +506,40 @@ Decisions taken during implementation that refine or deviate from `tradehub_impl
     purpose: a 7-day block beginning on a Saturday holds only five weekdays, and a week needs scans on
     four of them, so a single market holiday would have broken the streak and reset the clock (#89).
 
+## 2026-09-25 — Paper month, week 2
+
+97. **`broker_account.snapshot()` had no retry, and it is the most-called external read in the system.**
+    Phase 8 wired `ops/resilience` into market data, both model tiers, the news sources and Telegram —
+    and missed the broker account read, which the stop monitor makes every 30 seconds and every Guardian
+    gate evaluation makes once. Over the paper month's first eleven days that produced **seven red
+    `failure` rows and seven Telegram pings**, all of them the same transient network blip (a dropped
+    keep-alive, a momentary DNS failure), every one healed by the next 30-second cycle. Decision #79
+    already said reads are retried; this one simply was not. It is now, and it is a GET, so it is
+    idempotent and safe to retry.
+98. **One failed poll is not an incident; a failed poll with a position open is.** Retrying fixes most of
+    it, but not the principle: the monitor refreshes every 30 s, so a single failure that recovers on the
+    next cycle handled itself, and seven such alerts in eleven days is the alert-nobody-reads problem
+    this project's own dedupe exists to prevent — worse, it held §17 criterion 2 ("zero unhandled
+    execution errors") open for errors that were handled. `build_watchlist` now RAISES
+    `WatchlistUnavailable` instead of returning `{}`, because returning an empty dict said "no positions
+    are open" when the truth was "we do not know", and the monitor would quietly stop watching on the
+    strength of it. The monitor decides how loud the failure is, since only it remembers the previous
+    cycle: **immediately critical if it was watching a position** (that position is unprotected right
+    now, and pre-market a broker stop does nothing — BROKER_RULES R1), otherwise after
+    `ALERT_AFTER_FAILURES` consecutive failures (default 3, ≈90 s). One outage is one incident, not one
+    per cycle, and recovery is reported too. The heartbeat is still written on EVERY failed refresh, so
+    `/ops/preflight` sees the outage within one cycle and still goes red pre-market — only the incident
+    row is debounced, never the live check.
+99. **The 1,000-row cap bit again, this time while reading the results.** A `scans` query with
+    `.limit(5000)` came back truncated at 1,000 rows, which made a healthy, steady scan volume
+    (450–660 symbols evaluated per day) look like a collapse to 6. PostgREST caps a response regardless
+    of `limit`; only `.range()` paging gets everything, which is exactly why `ops/backup.py` pages. Worth
+    remembering because the failure is silent and the wrong conclusion is plausible: **any query here
+    that can exceed 1,000 rows must page, including throwaway diagnostic ones.**
+100. **The paper month's real blocker is not the code.** Eleven days in: week 1 complete, week 2 on
+     course, scans healthy — but `/signals/plan` ran on only 3 of the 8 scan days, and the three
+     briefings are timestamped 13:08, 10:50 and 00:22 ET rather than the scheduled 08:00. That is not a
+     pipeline fault; it is the machine not being awake when the cron fires, with n8n running the missed
+     trigger whenever it next comes up. The one signal that did reach the owner (IONQ, 2026-09-23) is
+     still sitting `proposed` — never deployed, never cancelled. Hence 0 of the 20 trades criterion 2
+     needs, and criterion 4's latency still unknown. Nothing in the engine can fix either.

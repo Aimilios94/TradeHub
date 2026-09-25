@@ -1,6 +1,8 @@
 # TradeHub
 
 Personal, single-user trading hub. **Hermes proposes, the Python engine proves, you decide.**
+**Where we left off: [docs/HANDOVER.md](docs/HANDOVER.md)** — read this first on a new machine.
+
 Plain-language map: [APP_OVERVIEW.md](APP_OVERVIEW.md) · Full spec: [tradehub_implementation_plan.md](tradehub_implementation_plan.md) (v1.3) · UI reference: [dashboard_mockup.html](dashboard_mockup.html) · Decisions taken during the build: [docs/DECISIONS.md](docs/DECISIONS.md)
 
 ## Architecture (thin n8n, fat Python)
