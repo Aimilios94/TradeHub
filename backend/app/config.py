@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     n8n_trigger_secret: str = ""
 
     finnhub_api_key: str = ""
+    massive_api_key: str = ""
 
     openrouter_api_key: str = ""
     openrouter_model_better: str = "nousresearch/hermes-4-405b"

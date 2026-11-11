@@ -189,7 +189,8 @@
       "es futures"
     ],
     "source_symbols": {
-      "yahoo": "ES=F"
+      "yahoo": "ES=F",
+      "massive": "ES"
     },
     "sector": null
   },
@@ -203,7 +204,8 @@
       "nq futures"
     ],
     "source_symbols": {
-      "yahoo": "NQ=F"
+      "yahoo": "NQ=F",
+      "massive": "NQ"
     },
     "sector": null
   },
@@ -216,7 +218,8 @@
       "dow futures"
     ],
     "source_symbols": {
-      "yahoo": "YM=F"
+      "yahoo": "YM=F",
+      "massive": "YM"
     },
     "sector": null
   },
@@ -229,7 +232,8 @@
       "russell futures"
     ],
     "source_symbols": {
-      "yahoo": "RTY=F"
+      "yahoo": "RTY=F",
+      "massive": "RTY"
     },
     "sector": null
   },
@@ -243,7 +247,8 @@
     ],
     "source_symbols": {
       "yahoo": "GC=F",
-      "cftc": "088691"
+      "cftc": "088691",
+      "massive": "GC"
     },
     "sector": null
   },
@@ -259,7 +264,8 @@
       "wti"
     ],
     "source_symbols": {
-      "yahoo": "CL=F"
+      "yahoo": "CL=F",
+      "massive": "CL"
     },
     "sector": null
   },
@@ -272,7 +278,8 @@
       "silver"
     ],
     "source_symbols": {
-      "yahoo": "SI=F"
+      "yahoo": "SI=F",
+      "massive": "SI"
     },
     "sector": null
   },

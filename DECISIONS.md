@@ -55,6 +55,9 @@ Every locked or rejected decision with its reason. Settled items are not re-open
 | D37 | COT uses the CFTC legacy futures-only report; gold only for now | Longest history (1986); the only starter strategy that needs COT is Gold + Dollar + COT |
 | D38 | Keys go in request headers where the provider allows it, and every stored error is scrubbed of key-like text | A key must not reach `sources.last_error`, a log or the UI |
 | D39 | n8n workflows are imported from `n8n/*.json` and published by hand in the n8n editor | The n8n 2.x command line can import a workflow but cannot publish one |
+| D40 | Massive (ex-Polygon) free plans are used as the futures backup for the strip, ahead of Stooq, and as a third news feed. Yahoo stays the main source | Owner's decision, 2026-11-11. Twelve Data has no futures and Stooq has not answered; Massive was verified for all 7 futures. This reverses the earlier rejection, which was about stock prices |
+| D41 | The futures backup shows the most active of the 4 nearest contracts, not the nearest by expiry | The nearest is often an untraded serial month |
+| D42 | A sentiment label that a provider attaches to a headline is stored in `news_items.source_meta` (migration `0003`) as a reference only | It is another model's opinion: never TradeHub's sentiment, never an eval label (D10) |
 
 ## Rejected
 
@@ -68,7 +71,7 @@ Every locked or rejected decision with its reason. Settled items are not re-open
 | StockTitan | No public developer API |
 | Brave Search API | Free tier replaced by metered billing in Feb 2026 |
 | Alpha Vantage | 25 requests a day is too few |
-| Massive (ex-Polygon), US Treasury API | Overlap with Tiingo and FRED |
+| Massive (ex-Polygon) for stock prices; US Treasury API | Overlap with Tiingo and FRED. Massive is used for futures backup and news, see D40 |
 | A 4th category "Indices" | Covered by the strip and index tickers |
 | Per-category LLM prompts | One engine, one template set, different configs |
 | Real-time CME or paid feeds | Delayed and daily data fit this use |

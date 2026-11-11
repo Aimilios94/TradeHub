@@ -85,6 +85,7 @@ class NewsHeadline:
     published_at: datetime | None  # UTC
     excerpt: str | None
     ticker_ids: tuple[str, ...]  # tickers the source itself attached to the item
+    meta: dict = field(default_factory=dict)  # extra source fields, stored as reference only
 
 
 @dataclass(frozen=True)

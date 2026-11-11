@@ -1,0 +1,34 @@
+{
+  "count": 2,
+  "request_id": "00000000000000000000000000000003",
+  "status": "OK",
+  "results": [
+    {
+      "id": "synthetic-0001",
+      "publisher": {"name": "Example Publisher", "homepage_url": "https://example.com/", "logo_url": "https://example.com/logo.svg", "favicon_url": "https://example.com/favicon.ico"},
+      "title": "Synthetic Massive headline one",
+      "author": "A. Writer",
+      "published_utc": "2026-11-11T13:02:00Z",
+      "article_url": "https://example.com/investing/2026/11/11/synthetic-one/",
+      "tickers": ["GOOG", "TSLA"],
+      "image_url": "https://example.com/one.jpg",
+      "description": "Synthetic description one.",
+      "keywords": ["synthetic"],
+      "insights": [
+        {"ticker": "GOOG", "sentiment": "neutral", "sentiment_reasoning": "Synthetic reasoning."},
+        {"ticker": "TSLA", "sentiment": "negative", "sentiment_reasoning": "Synthetic reasoning."}
+      ]
+    },
+    {
+      "id": "synthetic-0002",
+      "publisher": {"name": "Example Publisher"},
+      "title": "Synthetic Massive headline two",
+      "author": "B. Writer",
+      "published_utc": "2026-11-11T09:15:00Z",
+      "article_url": "https://example.com/investing/2026/11/11/synthetic-two/",
+      "tickers": ["TSLA"],
+      "description": "",
+      "keywords": []
+    }
+  ]
+}

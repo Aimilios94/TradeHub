@@ -13,7 +13,9 @@ One entry per version. Phases of the MVP are listed under "Unreleased" until v1.
 - Parquet recording area `data/live/` and snapshot tooling: freeze, manifest, SHA-256 hashes, `datasets` row, verify, DuckDB reader.
 - Migration `0002`: `news_items.source_tickers`.
 - First backfill: 206,147 daily bars for 27 symbols, about 197,000 intraday bars for the 16 watchlist symbols, 1,941 weekly gold COT reports.
-- Tests: 75 (source contract tests, recorder, health writer, failure injection, snapshots).
+- Massive (ex-Polygon) added on its free plans: futures backup for the strip (most active contract, verified for all 7 futures) and a third news feed. Migration `0003`: `news_items.source_meta` keeps a provider's own sentiment label as a reference only.
+- Twelve Data re-probed: it carries no futures.
+- Tests: 82 (source contract tests, recorder, health writer, failure injection, snapshots).
 - Fix: `.gitignore` ignored the code package `backend/app/data/`; the rule is now anchored to the repo root.
 
 ### Phase 0 — Foundations (2026-11-11)

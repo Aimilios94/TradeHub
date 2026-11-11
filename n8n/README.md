@@ -20,7 +20,7 @@ The secret comes from `.env` and is passed into the n8n container by Compose.
 |---|---|---|
 | `selfcheck` | Confirms n8n can reach the API and the API can reach the database. Writes nothing | Phase 0 |
 | `check_sources` | One real call per source adapter; updates source health | Phase 0.5 |
-| `record_news` | Headlines for the watchlist from Finnhub and Yahoo RSS into `news_items` | Phase 0.5 |
+| `record_news` | Headlines for the watchlist from Finnhub, Yahoo RSS and Massive into `news_items`. Takes about 4 minutes: Massive allows 5 calls a minute | Phase 0.5 |
 | `record_bars` | Daily bars for every seeded ticker and intraday bars for the watchlist into `data/live/` | Phase 0.5 |
 | `record_cot` | CFTC COT history into `data/live/cot/` | Phase 0.5 |
 

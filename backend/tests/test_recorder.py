@@ -191,7 +191,11 @@ def test_record_news_stores_headlines_with_the_ticker_they_came_from(engine):
             "EQ:NVDA": [("Shared story", "https://example.com/a")],
         },
     )
-    adapters = {"finnhub": finnhub, "yahoo_rss": FakeNews("yahoo_rss")}
+    adapters = {
+        "finnhub": finnhub,
+        "yahoo_rss": FakeNews("yahoo_rss"),
+        "massive": FakeNews("massive"),
+    }
     result = recorder.record_news(engine, adapters, pause=0)
     assert result["ok"] is True
     assert result["sources"]["finnhub"]["new_items"] == 2
@@ -209,6 +213,7 @@ def test_record_news_twice_adds_nothing_new(engine):
     adapters = {
         "finnhub": FakeNews("finnhub", {"EQ:TSLA": [("A", "https://e.com/a")]}),
         "yahoo_rss": FakeNews("yahoo_rss"),
+        "massive": FakeNews("massive"),
     }
     recorder.record_news(engine, adapters, pause=0)
     with engine.connect() as conn:
@@ -223,6 +228,7 @@ def test_a_news_source_that_is_down_gives_the_real_error_and_no_rows(engine):
     adapters = {
         "finnhub": FakeNews("finnhub", fail_for="all"),
         "yahoo_rss": FakeNews("yahoo_rss", {"EQ:TSLA": [("From RSS", "https://e.com/rss")]}),
+        "massive": FakeNews("massive"),
     }
     result = recorder.record_news(engine, adapters, pause=0)
     assert result["ok"] is False
@@ -239,7 +245,9 @@ def test_a_news_source_that_is_down_gives_the_real_error_and_no_rows(engine):
 def test_one_failing_ticker_does_not_stop_the_others(engine):
     finnhub = FakeNews("finnhub", {"EQ:NVDA": [("N", "https://e.com/n")]}, fail_for=("EQ:TSLA",))
     result = recorder.record_news(
-        engine, {"finnhub": finnhub, "yahoo_rss": FakeNews("yahoo_rss")}, pause=0
+        engine,
+        {"finnhub": finnhub, "yahoo_rss": FakeNews("yahoo_rss"), "massive": FakeNews("massive")},
+        pause=0,
     )
     assert result["ok"] is False
     assert result["sources"]["finnhub"]["calls_ok"] == 15
@@ -251,7 +259,11 @@ def test_one_failing_ticker_does_not_stop_the_others(engine):
 def test_a_source_the_owner_switched_off_is_skipped(engine):
     with engine.begin() as conn:
         conn.execute(text("UPDATE sources SET enabled = false WHERE id = 'finnhub'"))
-    adapters = {"finnhub": FakeNews("finnhub", fail_for="all"), "yahoo_rss": FakeNews("yahoo_rss")}
+    adapters = {
+        "finnhub": FakeNews("finnhub", fail_for="all"),
+        "yahoo_rss": FakeNews("yahoo_rss"),
+        "massive": FakeNews("massive"),
+    }
     result = recorder.record_news(engine, adapters, pause=0)
     assert result["ok"] is True
     assert result["skipped_disabled"] == ["finnhub"]
@@ -381,3 +393,26 @@ def test_a_job_already_running_is_refused(client):
         assert client.post("/jobs/record_news").status_code == 409
     finally:
         jobs._LOCKS["record_news"].release()
+
+
+def test_source_meta_is_stored_with_the_headline(engine):
+    class WithMeta(FakeNews):
+        def fetch_news(self, ticker, since):
+            if ticker.id != "EQ:TSLA":
+                return []
+            meta = {"massive_insights": [{"ticker": "TSLA", "sentiment": "negative"}]}
+            return [NewsHeadline("M", "https://e.com/m", NOW, None, (ticker.id,), meta)]
+
+    adapters = {
+        "finnhub": FakeNews("finnhub"),
+        "yahoo_rss": FakeNews("yahoo_rss"),
+        "massive": WithMeta("massive"),
+    }
+    assert recorder.record_news(engine, adapters, pause=0)["ok"] is True
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT source_id, source_meta FROM news_items")).all()
+    expected = {"massive_insights": [{"ticker": "TSLA", "sentiment": "negative"}]}
+    assert [tuple(row) for row in rows] == [("massive", expected)]
+    # Nothing was written to TradeHub's own sentiment table.
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM news_sentiment")).scalar() == 0

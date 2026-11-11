@@ -14,7 +14,8 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 | FMP | Main: earnings calendar. Fundamentals from v1.0.8 | working | `FMP_API_KEY` | 2026-11-11 |
 | Tiingo | Backup: daily prices; backfill cross-check | working | `TIINGO_API_KEY` | 2026-11-11 |
 | Twelve Data | Strip backup, limited (see below) | working | `TWELVEDATA_API_KEY` | 2026-11-11 |
-| Stooq | Strip backup once keyed | pending | `STOOQ_API_KEY` | 2026-11-11 |
+| Massive (ex-Polygon) | Backup: futures on the strip. Additive: company news | working | `MASSIVE_API_KEY` | 2026-11-11 |
+| Stooq | Second strip backup once keyed | pending | `STOOQ_API_KEY` | 2026-11-11 |
 | FRED / ALFRED | Main: macro, rates, Fed panel | working | `FRED_API_KEY` | 2026-11-11 |
 | BLS | Backup: CPI/NFP release dates | working | `BLS_API_KEY` | 2026-11-11 |
 | StockTwits | Additive: bull/bear ratio | working | none | 2026-11-11 |
@@ -26,8 +27,12 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 | Need | Order |
 |---|---|
 | Daily prices (stocks, ETFs) | Yahoo, then Tiingo |
-| Strip (futures, VIX, DXY, US10Y) | Yahoo, then Twelve Data (spot gold only on the free plan), then Stooq (pending key). FRED `VIXCLS` and `DGS10` can stand in for VIX and US10Y with a one-day delay |
-| Quotes and company news | Finnhub, then Yahoo RSS |
+| Strip: futures (ES, NQ, YM, RTY, GC, CL, SI) | Yahoo, then Massive (about 8 hours late), then Stooq (pending key) |
+| Strip: VIX, US10Y | Yahoo, then FRED `VIXCLS` and `DGS10` (one day late) |
+| Strip: DXY | Yahoo only. No free backup |
+| Spot gold | Twelve Data `XAU/USD` |
+| Quotes | Finnhub |
+| Company news | Finnhub, Yahoo RSS and Massive are all recorded |
 | Earnings calendar | FMP, then Finnhub, then yfinance earnings dates |
 | Social sentiment | News-only by default; StockTwits is added when it has enough labeled messages |
 
@@ -37,9 +42,9 @@ If every source for a need fails, the UI shows the last value with a stale label
 
 | Gap found | Decision |
 |---|---|
-| Stooq needs a key that has not arrived | Stays `pending`. Nothing depends on it; the adapter is written when the key arrives |
+| Stooq needs a key that has not arrived | Stays `pending`. Massive is the futures backup meanwhile; the Stooq adapter is written when the key arrives |
 | Twelve Data free plan has no indices or futures | Not a strip backup for those. It covers spot gold only |
-| Futures on the strip (ES, NQ, YM, RTY, GC, CL, SI) have no working backup | If Yahoo fails they show the last value with a stale label and the error. They are display-only, so no backtest is affected |
+| Futures on the strip (ES, NQ, YM, RTY, GC, CL, SI) needed a backup | Massive free plan, verified for all seven. Its data is about 8 hours late and is labeled as delayed. Display-only, so no backtest is affected |
 | VIX and US10Y backup | FRED `VIXCLS` and `DGS10`, one day late, labeled as delayed |
 | DXY backup | None free. FRED `DTWEXBGS` (broad dollar index) is a different index and is shown under its own name, never as DXY |
 | Yahoo has no spot gold symbol (`XAUUSD=X` is not found) | Spot gold comes from Twelve Data `XAU/USD` only |
@@ -50,7 +55,7 @@ If every source for a need fails, the UI shows the last value with a stale label
 
 | Data | From | Where | Schedule (UTC) |
 |---|---|---|---|
-| News headlines, link, short excerpt, the ticker it was fetched for | Finnhub and Yahoo RSS, watchlist tickers | PostgreSQL `news_items` | 07:00, 13:00, 21:30 daily |
+| News headlines, link, short excerpt, the ticker it was fetched for | Finnhub, Yahoo RSS and Massive, watchlist tickers | PostgreSQL `news_items` | 07:00, 13:00, 21:30 daily |
 | Daily bars, full history | Yahoo, every seeded ticker with a Yahoo symbol (27) | `data/live/bars_daily/` | 22:30 daily |
 | Intraday bars: 1m, 5m, 1h, regular session | Yahoo, watchlist tickers (16) | `data/live/bars_intraday/` | 22:30 daily |
 | COT, legacy futures-only | CFTC, tickers with a `cftc` market code (gold) | `data/live/cot/` | Friday 22:00 |
@@ -78,6 +83,14 @@ Yahoo serves 1-minute bars for the last 7 days only, 5-minute for 60 days and ho
 - Probe of strip symbols on the free plan: `XAU/USD` works. `SPX` requires the Pro plan and `GC` the Grow plan. `VIX`, `DXY` and `NQ` were rejected as invalid symbols. `ES` and `CL` resolve to stocks (Eversource, Colgate-Palmolive), so they must never be requested as futures.
 - Re-probed 2026-11-11 with 25 calls (symbol search, the commodities list, and quotes): symbol search returns no futures for `ES`, `GC` or `CL`, only stocks and funds. `YM`, `RTY`, `ES1!`, `GC1!`, `CL1!`, `DJI`, `RUT` are invalid symbols. `SI` resolves to a stock (Shoulder Innovations). Spot silver `XAG/USD`, spot oil `WTI/USD` and `XBR/USD`, `NDX` and `TNX` need a paid plan.
 - Conclusion: it carries no futures at all, and on the free plan no indices. Its only use for the strip is spot gold `XAU/USD`.
+
+### Massive (formerly Polygon.io)
+- Free Futures Basic and Stocks Basic plans: 5 calls a minute, 2 years of history, non-professional use. The adapter waits 12.5 seconds between calls.
+- Futures, verified 2026-11-11 for ES, NQ, YM, RTY, GC, CL and SI: real dated contracts (`ESZ6`), daily session bars with a settlement price, minute bars about 8 hours old. Closes were within 0.1% of Yahoo's for all seven on the verify date.
+- There is no continuous series. The nearest contract by expiry is often an untraded month (gold in November: `GCX6` traded 50 contracts, `GCZ6` over 100,000), so the adapter compares the 4 nearest contracts and takes the one with the most volume. That choice is kept for the day: the first fetch of a product costs 5 calls, later ones 1.
+- Used only when Yahoo fails, for display only, never in a backtest.
+- News, `/v2/reference/news`: per ticker, up to 1,000 items a call, 2 years back. Each item carries a sentiment label per ticker written by Massive's own model. It is stored in `news_items.source_meta` as a reference to compare against later. It is never TradeHub's sentiment and never an eval label.
+- Not covered: VIX, DXY and US10Y (they are indices, not futures).
 
 ### Stooq
 - The CSV endpoint `https://stooq.com/q/d/l/?s=SYMBOL&i=d` works in a browser session. A script receives an HTML page: programmatic access needs an API key (policy since April 2026).

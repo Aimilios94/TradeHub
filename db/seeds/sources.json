@@ -88,12 +88,27 @@
     "notes": "Basic plan: 8 calls/min, 800/day. Probe: XAU/USD works; SPX needs Pro, GC needs Grow; VIX, DXY, NQ rejected; ES and CL resolve to stocks. Does not cover indices or futures on the free plan."
   },
   {
+    "id": "massive",
+    "name": "Massive (formerly Polygon.io)",
+    "kinds": [
+      "strip",
+      "news"
+    ],
+    "role": "Backup: futures on the strip (about 8 hours late). Additive: company news",
+    "status": "working",
+    "priority": 2,
+    "credentials_ref": "MASSIVE_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Free Futures Basic and Stocks Basic plans: 5 calls/min, 2 years of history, non-professional use. Futures: real dated contracts for ES, NQ, YM, RTY, GC, CL, SI; daily session bars with settlement; minute data about 8 hours old. News: per-ticker, with Massive's own sentiment label kept as a reference only. Display-only for futures, never backtested."
+  },
+  {
     "id": "stooq",
     "name": "Stooq",
     "kinds": [
       "strip"
     ],
-    "role": "Backup for the strip once a key arrives",
+    "role": "Second backup for the strip once a key arrives",
     "status": "pending",
     "priority": 3,
     "credentials_ref": "STOOQ_API_KEY",

@@ -13,7 +13,7 @@ What is watched and where to look. Items marked "planned" are designed but not b
 - The `sources` table holds `last_success_at`, `last_error_at` and `last_error` per source, shown by `GET /api/sources` and on the status page.
 - Every job that calls a source updates that source's row. A source is healthy when its last success is newer than its last error.
 - `last_error` is the real error text with anything key-like removed.
-- `POST /jobs/check_sources` makes one real call per adapter (Yahoo, Yahoo RSS, Finnhub, SearXNG, CFTC) and updates their rows.
+- `POST /jobs/check_sources` makes one real call per adapter (Yahoo, Yahoo RSS, Finnhub, Massive, SearXNG, CFTC) and updates their rows.
 - A failed source keeps its last data with a stale label; no rows are invented.
 
 ## Recorder jobs (built)

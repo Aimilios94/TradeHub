@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import Engine, bindparam, text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.types import Text
 
 from app.data.store import TABLE_KEYS, last_value, live_path, merge_rows
@@ -32,7 +32,7 @@ from app.ingest.health import enabled_source_ids, record_error, record_success, 
 from app.ingest.yahoo import INTRADAY_INTERVALS
 from app.ingest.yahoo import SOURCE_KEY as YAHOO_KEY
 
-NEWS_SOURCES = ("finnhub", "yahoo_rss")  # both are recorded, to build history
+NEWS_SOURCES = ("finnhub", "yahoo_rss", "massive")  # all are recorded, to build history
 NEWS_LOOKBACK = timedelta(days=3)
 EXCERPT_LENGTH = 500
 # After the first fetch only the recent days are requested; a longer gap triggers a full refetch.
@@ -52,16 +52,17 @@ _TICKERS = text(
 _INSERT_NEWS = text(
     """
     INSERT INTO news_items
-        (source_id, title, url, published_at, ingested_at, dedupe_hash, excerpt, source_tickers)
+        (source_id, title, url, published_at, ingested_at, dedupe_hash, excerpt, source_tickers,
+         source_meta)
     VALUES (:source_id, :title, :url, :published_at, :ingested_at, :dedupe_hash, :excerpt,
-            :source_tickers)
+            :source_tickers, :source_meta)
     ON CONFLICT (dedupe_hash) DO UPDATE SET source_tickers = (
         SELECT array_agg(DISTINCT ticker ORDER BY ticker)
         FROM unnest(news_items.source_tickers || EXCLUDED.source_tickers) AS ticker
     )
     RETURNING (xmax = 0) AS inserted
     """
-).bindparams(bindparam("source_tickers", type_=ARRAY(Text)))
+).bindparams(bindparam("source_tickers", type_=ARRAY(Text)), bindparam("source_meta", type_=JSONB))
 
 
 def load_tickers(engine: Engine, watchlist_only: bool = False) -> list[TickerRef]:
@@ -105,6 +106,7 @@ def store_headlines(
                 "dedupe_hash": dedupe_hash(item.url),
                 "excerpt": item.excerpt[:EXCERPT_LENGTH] if item.excerpt else None,
                 "source_tickers": sorted(item.ticker_ids),
+                "source_meta": item.meta,
             }
             inserted += bool(conn.execute(_INSERT_NEWS, row).scalar())
     return inserted

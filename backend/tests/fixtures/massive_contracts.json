@@ -1,0 +1,9 @@
+{
+  "request_id": "00000000000000000000000000000001",
+  "status": "OK",
+  "results": [
+    {"active": true, "date": "2026-11-11", "days_to_maturity": 48, "first_trade_date": "2021-12-30", "group_code": "GC", "last_trade_date": "2026-12-29", "name": "GCZ6 Future", "product_code": "GC", "settlement_date": "2026-12-29", "ticker": "GCZ6", "trade_tick_size": 0.1, "trading_venue": "XCEC", "type": "single"},
+    {"active": true, "date": "2026-11-11", "days_to_maturity": 77, "first_trade_date": "2026-10-29", "group_code": "GC", "last_trade_date": "2027-01-27", "name": "GCF7 Future", "product_code": "GC", "settlement_date": "2027-01-27", "ticker": "GCF7", "trade_tick_size": 0.1, "trading_venue": "XCEC", "type": "single"},
+    {"active": true, "date": "2026-11-11", "days_to_maturity": 14, "first_trade_date": "2026-08-28", "group_code": "GC", "last_trade_date": "2026-11-25", "name": "GCX6 Future", "product_code": "GC", "settlement_date": "2026-11-25", "ticker": "GCX6", "trade_tick_size": 0.1, "trading_venue": "XCEC", "type": "single"}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "request_id": "00000000000000000000000000000002",
+  "status": "OK",
+  "results": [
+    {"close": 3996.3, "dollar_volume": 200380.0, "high": 4048.2, "low": 3995.9, "open": 4048.2, "session_end_date": "2026-11-11", "settlement_price": 3992, "ticker": "GCX6", "transactions": 31, "volume": 50, "window_start": 1794348000000000000},
+    {"close": 4032, "dollar_volume": 64900.0, "high": 4122.1, "low": 4032, "open": 4122.1, "session_end_date": "2026-11-10", "settlement_price": 4020.7, "ticker": "GCX6", "transactions": 12, "volume": 16, "window_start": 1794261600000000000}
+  ]
+}

@@ -10,6 +10,7 @@ from app.config import Settings
 from app.ingest.base import SourceAdapter, new_http_client
 from app.ingest.cftc import CftcCotAdapter
 from app.ingest.finnhub import FinnhubAdapter
+from app.ingest.massive import MassiveAdapter
 from app.ingest.searxng import SearxngAdapter
 from app.ingest.yahoo import YahooFinanceAdapter
 from app.ingest.yahoo_rss import YahooRssAdapter
@@ -23,6 +24,7 @@ def build_adapters(
         YahooFinanceAdapter(),
         YahooRssAdapter(client),
         FinnhubAdapter(client, settings.finnhub_api_key),
+        MassiveAdapter(client, settings.massive_api_key),
         SearxngAdapter(client, settings.searxng_base_url),
         CftcCotAdapter(client),
     ]
