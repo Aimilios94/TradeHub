@@ -76,7 +76,8 @@ Yahoo serves 1-minute bars for the last 7 days only, 5-minute for 60 days and ho
 ### Twelve Data
 - Basic plan: 8 calls/min, 800/day.
 - Probe of strip symbols on the free plan: `XAU/USD` works. `SPX` requires the Pro plan and `GC` the Grow plan. `VIX`, `DXY` and `NQ` were rejected as invalid symbols. `ES` and `CL` resolve to stocks (Eversource, Colgate-Palmolive), so they must never be requested as futures.
-- Conclusion: it does not back up indices or futures on the free plan.
+- Re-probed 2026-11-11 with 25 calls (symbol search, the commodities list, and quotes): symbol search returns no futures for `ES`, `GC` or `CL`, only stocks and funds. `YM`, `RTY`, `ES1!`, `GC1!`, `CL1!`, `DJI`, `RUT` are invalid symbols. `SI` resolves to a stock (Shoulder Innovations). Spot silver `XAG/USD`, spot oil `WTI/USD` and `XBR/USD`, `NDX` and `TNX` need a paid plan.
+- Conclusion: it carries no futures at all, and on the free plan no indices. Its only use for the strip is spot gold `XAU/USD`.
 
 ### Stooq
 - The CSV endpoint `https://stooq.com/q/d/l/?s=SYMBOL&i=d` works in a browser session. A script receives an HTML page: programmatic access needs an API key (policy since April 2026).
