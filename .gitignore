@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Data snapshots and local databases (plan: data/ is git-ignored)
+data/
+*.duckdb
+*.duckdb.wal
+backups/
+
+# Real news text and labels from copyrighted sources stay local
+backend/eval/**/private/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Agent handoff files: local only, never committed (owner decision 2026-11-11)
+HANDOFF.md
+next-agent-prompt.md
+previous-chat-catchup.md

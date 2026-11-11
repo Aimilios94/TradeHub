@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+data
+backups
+frontend
+docs
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+HANDOFF.md
+next-agent-prompt.md
+previous-chat-catchup.md

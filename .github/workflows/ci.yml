@@ -1,0 +1,83 @@
+name: CI
+
+# Every push and PR: lint, migrate a real PostgreSQL 16, run the tests, build the frontend.
+# CI never calls an LLM or a data provider, and needs no secrets.
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tradehub
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: tradehub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tradehub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      POSTGRES_USER: tradehub
+      POSTGRES_PASSWORD: ci-only-password
+      POSTGRES_DB: tradehub
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check . ../db
+          uv run ruff format --check . ../db
+
+      - name: Migrations apply cleanly
+        run: uv run alembic -c ../db/alembic.ini upgrade head
+
+      - name: Seeds load
+        run: uv run python -m scripts.load_seeds
+
+      - name: Tests
+        run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

@@ -1,0 +1,11 @@
+# SearXNG for TradeHub: local use only, JSON output enabled for the Python search adapter.
+use_default_settings: true
+server:
+  # Overridden by the SEARXNG_SECRET environment variable.
+  secret_key: "overridden-by-env"
+  limiter: false
+  image_proxy: false
+search:
+  formats:
+    - html
+    - json

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "geopolitical",
+    "name": "Geopolitical",
+    "meaning": "Wars, escalations, sanctions",
+    "example": "Escalation in Middle East",
+    "plus_one_meaning": "Escalation",
+    "minus_one_meaning": "De-escalation",
+    "sort_order": 1
+  },
+  {
+    "id": "monetary",
+    "name": "Monetary",
+    "meaning": "FOMC, rate expectations, CPI prints, real yields",
+    "example": "Fed signals slower cuts",
+    "plus_one_meaning": "Hawkish",
+    "minus_one_meaning": "Dovish",
+    "sort_order": 2
+  },
+  {
+    "id": "macro_risk",
+    "name": "Macro risk",
+    "meaning": "Bank failures, collapse fears, debt-ceiling drama",
+    "example": "Regional bank under pressure",
+    "plus_one_meaning": "Stress rising",
+    "minus_one_meaning": "Stress easing",
+    "sort_order": 3
+  },
+  {
+    "id": "supply_flows",
+    "name": "Supply/flows",
+    "meaning": "OPEC, EIA inventories, central-bank gold buying, mine outages",
+    "example": "Crude inventories draw",
+    "plus_one_meaning": "Supply tightening or inflows",
+    "minus_one_meaning": "Supply loosening or outflows",
+    "sort_order": 4
+  },
+  {
+    "id": "positioning",
+    "name": "Positioning",
+    "meaning": "COT extremes, ETF flows, retail sentiment extremes",
+    "example": "Gold COT record long",
+    "plus_one_meaning": "Crowded long",
+    "minus_one_meaning": "Crowded short",
+    "sort_order": 5
+  },
+  {
+    "id": "dollar",
+    "name": "Dollar",
+    "meaning": "DXY direction, de-dollarization narratives",
+    "example": "DXY +0.5% on the day",
+    "plus_one_meaning": "Dollar up",
+    "minus_one_meaning": "Dollar down",
+    "sort_order": 6
+  },
+  {
+    "id": "liquidity_flush",
+    "name": "Liquidity flush",
+    "meaning": "Assets sold together in margin-call cascades",
+    "example": "March 2020 style",
+    "plus_one_meaning": "Flush under way",
+    "minus_one_meaning": null,
+    "sort_order": 7
+  }
+]

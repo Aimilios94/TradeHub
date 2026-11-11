@@ -1,0 +1,82 @@
+[
+  {
+    "ticker_id": "ETF:SPY",
+    "position": 0,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:QQQ",
+    "position": 1,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:GLD",
+    "position": 2,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "EQ:TSLA",
+    "position": 3,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "EQ:NVDA",
+    "position": 4,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLK",
+    "position": 5,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLF",
+    "position": 6,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLE",
+    "position": 7,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLV",
+    "position": 8,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLY",
+    "position": 9,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLP",
+    "position": 10,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLI",
+    "position": 11,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLB",
+    "position": 12,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLU",
+    "position": 13,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLRE",
+    "position": 14,
+    "is_seed": true
+  },
+  {
+    "ticker_id": "ETF:XLC",
+    "position": 15,
+    "is_seed": true
+  }
+]

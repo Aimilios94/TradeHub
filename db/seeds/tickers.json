@@ -1,0 +1,348 @@
+[
+  {
+    "id": "EQ:TSLA",
+    "asset_class": "EQ",
+    "symbol": "TSLA",
+    "display_name": "Tesla",
+    "aliases": [
+      "tesla"
+    ],
+    "source_symbols": {
+      "yahoo": "TSLA"
+    },
+    "sector": "Consumer Discretionary"
+  },
+  {
+    "id": "EQ:NVDA",
+    "asset_class": "EQ",
+    "symbol": "NVDA",
+    "display_name": "NVIDIA",
+    "aliases": [
+      "nvidia"
+    ],
+    "source_symbols": {
+      "yahoo": "NVDA"
+    },
+    "sector": "Technology"
+  },
+  {
+    "id": "ETF:SPY",
+    "asset_class": "ETF",
+    "symbol": "SPY",
+    "display_name": "SPDR S&P 500 ETF",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "SPY"
+    },
+    "sector": null
+  },
+  {
+    "id": "ETF:QQQ",
+    "asset_class": "ETF",
+    "symbol": "QQQ",
+    "display_name": "Invesco QQQ (Nasdaq-100) ETF",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "QQQ"
+    },
+    "sector": null
+  },
+  {
+    "id": "ETF:GLD",
+    "asset_class": "ETF",
+    "symbol": "GLD",
+    "display_name": "SPDR Gold Shares ETF",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "GLD"
+    },
+    "sector": null
+  },
+  {
+    "id": "ETF:XLK",
+    "asset_class": "ETF",
+    "symbol": "XLK",
+    "display_name": "Technology Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLK"
+    },
+    "sector": "Technology"
+  },
+  {
+    "id": "ETF:XLF",
+    "asset_class": "ETF",
+    "symbol": "XLF",
+    "display_name": "Financials Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLF"
+    },
+    "sector": "Financials"
+  },
+  {
+    "id": "ETF:XLE",
+    "asset_class": "ETF",
+    "symbol": "XLE",
+    "display_name": "Energy Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLE"
+    },
+    "sector": "Energy"
+  },
+  {
+    "id": "ETF:XLV",
+    "asset_class": "ETF",
+    "symbol": "XLV",
+    "display_name": "Health Care Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLV"
+    },
+    "sector": "Health Care"
+  },
+  {
+    "id": "ETF:XLY",
+    "asset_class": "ETF",
+    "symbol": "XLY",
+    "display_name": "Consumer Discretionary Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLY"
+    },
+    "sector": "Consumer Discretionary"
+  },
+  {
+    "id": "ETF:XLP",
+    "asset_class": "ETF",
+    "symbol": "XLP",
+    "display_name": "Consumer Staples Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLP"
+    },
+    "sector": "Consumer Staples"
+  },
+  {
+    "id": "ETF:XLI",
+    "asset_class": "ETF",
+    "symbol": "XLI",
+    "display_name": "Industrials Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLI"
+    },
+    "sector": "Industrials"
+  },
+  {
+    "id": "ETF:XLB",
+    "asset_class": "ETF",
+    "symbol": "XLB",
+    "display_name": "Materials Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLB"
+    },
+    "sector": "Materials"
+  },
+  {
+    "id": "ETF:XLU",
+    "asset_class": "ETF",
+    "symbol": "XLU",
+    "display_name": "Utilities Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLU"
+    },
+    "sector": "Utilities"
+  },
+  {
+    "id": "ETF:XLRE",
+    "asset_class": "ETF",
+    "symbol": "XLRE",
+    "display_name": "Real Estate Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLRE"
+    },
+    "sector": "Real Estate"
+  },
+  {
+    "id": "ETF:XLC",
+    "asset_class": "ETF",
+    "symbol": "XLC",
+    "display_name": "Communication Services Select Sector SPDR",
+    "aliases": [],
+    "source_symbols": {
+      "yahoo": "XLC"
+    },
+    "sector": "Communication Services"
+  },
+  {
+    "id": "FUT:ES",
+    "asset_class": "FUT",
+    "symbol": "ES",
+    "display_name": "S&P 500 E-mini futures",
+    "aliases": [
+      "s&p futures",
+      "es futures"
+    ],
+    "source_symbols": {
+      "yahoo": "ES=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "FUT:NQ",
+    "asset_class": "FUT",
+    "symbol": "NQ",
+    "display_name": "Nasdaq-100 E-mini futures",
+    "aliases": [
+      "nasdaq futures",
+      "nq futures"
+    ],
+    "source_symbols": {
+      "yahoo": "NQ=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "FUT:YM",
+    "asset_class": "FUT",
+    "symbol": "YM",
+    "display_name": "Dow E-mini futures",
+    "aliases": [
+      "dow futures"
+    ],
+    "source_symbols": {
+      "yahoo": "YM=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "FUT:RTY",
+    "asset_class": "FUT",
+    "symbol": "RTY",
+    "display_name": "Russell 2000 E-mini futures",
+    "aliases": [
+      "russell futures"
+    ],
+    "source_symbols": {
+      "yahoo": "RTY=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "FUT:GC",
+    "asset_class": "FUT",
+    "symbol": "GC",
+    "display_name": "Gold futures",
+    "aliases": [
+      "gold"
+    ],
+    "source_symbols": {
+      "yahoo": "GC=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "FUT:CL",
+    "asset_class": "FUT",
+    "symbol": "CL",
+    "display_name": "WTI crude oil futures",
+    "aliases": [
+      "oil",
+      "crude",
+      "crude oil",
+      "wti"
+    ],
+    "source_symbols": {
+      "yahoo": "CL=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "FUT:SI",
+    "asset_class": "FUT",
+    "symbol": "SI",
+    "display_name": "Silver futures",
+    "aliases": [
+      "silver"
+    ],
+    "source_symbols": {
+      "yahoo": "SI=F"
+    },
+    "sector": null
+  },
+  {
+    "id": "IDX:SPX",
+    "asset_class": "IDX",
+    "symbol": "SPX",
+    "display_name": "S&P 500 index",
+    "aliases": [
+      "s&p 500",
+      "sp500"
+    ],
+    "source_symbols": {
+      "yahoo": "^GSPC"
+    },
+    "sector": null
+  },
+  {
+    "id": "IDX:VIX",
+    "asset_class": "IDX",
+    "symbol": "VIX",
+    "display_name": "CBOE Volatility Index",
+    "aliases": [
+      "vix"
+    ],
+    "source_symbols": {
+      "yahoo": "^VIX"
+    },
+    "sector": null
+  },
+  {
+    "id": "IDX:DXY",
+    "asset_class": "IDX",
+    "symbol": "DXY",
+    "display_name": "US Dollar Index",
+    "aliases": [
+      "dxy",
+      "dollar index"
+    ],
+    "source_symbols": {
+      "yahoo": "DX-Y.NYB"
+    },
+    "sector": null
+  },
+  {
+    "id": "IDX:US10Y",
+    "asset_class": "IDX",
+    "symbol": "US10Y",
+    "display_name": "US 10-year Treasury yield",
+    "aliases": [
+      "us10y",
+      "10-year yield"
+    ],
+    "source_symbols": {
+      "yahoo": "^TNX"
+    },
+    "sector": null
+  },
+  {
+    "id": "SPOT:XAUUSD",
+    "asset_class": "SPOT",
+    "symbol": "XAUUSD",
+    "display_name": "Gold spot (XAU/USD)",
+    "aliases": [
+      "xauusd",
+      "gold spot"
+    ],
+    "source_symbols": {
+      "yahoo": "XAUUSD=X",
+      "twelvedata": "XAU/USD"
+    },
+    "sector": null
+  }
+]

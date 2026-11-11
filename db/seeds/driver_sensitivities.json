@@ -1,0 +1,135 @@
+[
+  {
+    "driver_id": "geopolitical",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": 1,
+    "horizon": "days",
+    "note": "Plan example: war, gold up over days."
+  },
+  {
+    "driver_id": "geopolitical",
+    "ticker_id": "ETF:SPY",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Risk-off on escalation."
+  },
+  {
+    "driver_id": "geopolitical",
+    "ticker_id": "ETF:QQQ",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Risk-off on escalation."
+  },
+  {
+    "driver_id": "geopolitical",
+    "ticker_id": "ETF:XLE",
+    "expected_direction": 1,
+    "horizon": "days",
+    "note": "Escalation tends to lift oil and energy shares."
+  },
+  {
+    "driver_id": "monetary",
+    "ticker_id": "ETF:SPY",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Hawkish surprise pressures equities."
+  },
+  {
+    "driver_id": "monetary",
+    "ticker_id": "ETF:QQQ",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Long-duration growth is rate-sensitive."
+  },
+  {
+    "driver_id": "monetary",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Higher real yields weigh on gold."
+  },
+  {
+    "driver_id": "macro_risk",
+    "ticker_id": "ETF:SPY",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Systemic stress hits equities."
+  },
+  {
+    "driver_id": "macro_risk",
+    "ticker_id": "ETF:QQQ",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Systemic stress hits equities."
+  },
+  {
+    "driver_id": "macro_risk",
+    "ticker_id": "ETF:XLF",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Bank stress hits financials first."
+  },
+  {
+    "driver_id": "macro_risk",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": 1,
+    "horizon": "days",
+    "note": "Safe-haven demand."
+  },
+  {
+    "driver_id": "supply_flows",
+    "ticker_id": "ETF:XLE",
+    "expected_direction": 1,
+    "horizon": "days",
+    "note": "Tighter oil supply lifts energy shares."
+  },
+  {
+    "driver_id": "supply_flows",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": 1,
+    "horizon": "weeks",
+    "note": "Central-bank buying and ETF inflows."
+  },
+  {
+    "driver_id": "positioning",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": -1,
+    "horizon": "weeks",
+    "note": "Crowded long read as contrarian."
+  },
+  {
+    "driver_id": "positioning",
+    "ticker_id": "ETF:SPY",
+    "expected_direction": -1,
+    "horizon": "weeks",
+    "note": "Crowded long read as contrarian."
+  },
+  {
+    "driver_id": "dollar",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Gold usually moves against the dollar."
+  },
+  {
+    "driver_id": "liquidity_flush",
+    "ticker_id": "ETF:GLD",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Plan example: liquidity flush, gold down short-term."
+  },
+  {
+    "driver_id": "liquidity_flush",
+    "ticker_id": "ETF:SPY",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Forced selling across assets."
+  },
+  {
+    "driver_id": "liquidity_flush",
+    "ticker_id": "ETF:QQQ",
+    "expected_direction": -1,
+    "horizon": "days",
+    "note": "Forced selling across assets."
+  }
+]

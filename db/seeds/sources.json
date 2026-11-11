@@ -1,0 +1,175 @@
+[
+  {
+    "id": "yahoo_finance",
+    "name": "Yahoo Finance (yfinance)",
+    "kinds": [
+      "prices",
+      "strip"
+    ],
+    "role": "Main: daily prices and the futures/VIX/DXY strip",
+    "status": "untested",
+    "priority": 1,
+    "credentials_ref": null,
+    "version_introduced": "v1.0",
+    "last_verified_on": null,
+    "notes": "Unofficial. Futures (=F) series are display-only, never backtested. Verified in Phase 0.5."
+  },
+  {
+    "id": "yahoo_rss",
+    "name": "Yahoo Finance RSS",
+    "kinds": [
+      "news"
+    ],
+    "role": "Backup: company news",
+    "status": "untested",
+    "priority": 2,
+    "credentials_ref": null,
+    "version_introduced": "v1.0",
+    "last_verified_on": null,
+    "notes": "Verified in Phase 0.5."
+  },
+  {
+    "id": "finnhub",
+    "name": "Finnhub",
+    "kinds": [
+      "quotes",
+      "news",
+      "earnings"
+    ],
+    "role": "Main: quotes and company news. Backup: earnings calendar",
+    "status": "working",
+    "priority": 1,
+    "credentials_ref": "FINNHUB_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Free: 60 calls/min, 1 year of company news. Quote, company-news and earnings calendar returned data on the free key."
+  },
+  {
+    "id": "fmp",
+    "name": "Financial Modeling Prep",
+    "kinds": [
+      "earnings",
+      "fundamentals"
+    ],
+    "role": "Main: earnings calendar. Fundamentals from v1.0.8",
+    "status": "working",
+    "priority": 1,
+    "credentials_ref": "FMP_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Free: 250 calls/day, /stable/ endpoints only. quote, earnings-calendar, profile, income-statement, balance-sheet-statement, cash-flow-statement, ratios, key-metrics all returned data on the free key."
+  },
+  {
+    "id": "tiingo",
+    "name": "Tiingo",
+    "kinds": [
+      "prices"
+    ],
+    "role": "Backup: daily prices, and cross-check for backfills",
+    "status": "working",
+    "priority": 2,
+    "credentials_ref": "TIINGO_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Free: 50 req/hour, 1,000/day, ~500 symbols/month, personal use."
+  },
+  {
+    "id": "twelvedata",
+    "name": "Twelve Data",
+    "kinds": [
+      "strip"
+    ],
+    "role": "Backup for the strip, limited",
+    "status": "working",
+    "priority": 2,
+    "credentials_ref": "TWELVEDATA_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Basic plan: 8 calls/min, 800/day. Probe: XAU/USD works; SPX needs Pro, GC needs Grow; VIX, DXY, NQ rejected; ES and CL resolve to stocks. Does not cover indices or futures on the free plan."
+  },
+  {
+    "id": "stooq",
+    "name": "Stooq",
+    "kinds": [
+      "strip"
+    ],
+    "role": "Backup for the strip once a key arrives",
+    "status": "pending",
+    "priority": 3,
+    "credentials_ref": "STOOQ_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "CSV works in a browser session; programmatic access needs an API key (policy since 2026-04). Key requested by email 2026-11-11. Format when keyed: /q/d/l/?s=SYMBOL&i=d, Date,Open,High,Low,Close,Volume."
+  },
+  {
+    "id": "fred",
+    "name": "FRED / ALFRED",
+    "kinds": [
+      "macro"
+    ],
+    "role": "Main: macro series, rates, Fed panel, first-published vintages",
+    "status": "working",
+    "priority": 1,
+    "credentials_ref": "FRED_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Free. DTWEXBGS returned data."
+  },
+  {
+    "id": "bls",
+    "name": "Bureau of Labor Statistics",
+    "kinds": [
+      "macro",
+      "calendar"
+    ],
+    "role": "Backup: CPI/NFP release dates",
+    "status": "working",
+    "priority": 2,
+    "credentials_ref": "BLS_API_KEY",
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Free v2 key. CPI series CUUR0000SA0 returned data."
+  },
+  {
+    "id": "stocktwits",
+    "name": "StockTwits",
+    "kinds": [
+      "social"
+    ],
+    "role": "Additive: bull/bear ratio for the composite score",
+    "status": "working",
+    "priority": 2,
+    "credentials_ref": null,
+    "version_introduced": "v1.0",
+    "last_verified_on": "2026-11-11",
+    "notes": "Unofficial public endpoint /api/2/streams/symbol/{TICKER}.json, no key, no account. One cached fetch per watchlist ticker per day. Never required: no labeled messages or endpoint down means news-only."
+  },
+  {
+    "id": "searxng",
+    "name": "SearXNG (self-hosted)",
+    "kinds": [
+      "search"
+    ],
+    "role": "Deep search",
+    "status": "untested",
+    "priority": 1,
+    "credentials_ref": null,
+    "version_introduced": "v1.0",
+    "last_verified_on": null,
+    "notes": "Runs in Docker Compose. Verified in Phase 0.5."
+  },
+  {
+    "id": "cftc_cot",
+    "name": "CFTC Commitments of Traders (Socrata)",
+    "kinds": [
+      "positioning"
+    ],
+    "role": "COT history for backtests; live weekly job from v1.2",
+    "status": "untested",
+    "priority": 1,
+    "credentials_ref": null,
+    "version_introduced": "v1.0",
+    "last_verified_on": null,
+    "notes": "Free, no key. History back to 1986. Verified in Phase 0.5."
+  }
+]
