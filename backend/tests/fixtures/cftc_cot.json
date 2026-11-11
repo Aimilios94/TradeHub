@@ -1,0 +1,26 @@
+[
+  {
+    "id": "261103088691F",
+    "market_and_exchange_names": "GOLD - COMMODITY EXCHANGE INC.",
+    "report_date_as_yyyy_mm_dd": "2026-11-03T00:00:00.000",
+    "yyyy_report_week_ww": "2026 Report Week 44",
+    "contract_market_name": "GOLD",
+    "cftc_contract_market_code": "088691",
+    "cftc_market_code": "CMX ",
+    "cftc_region_code": "NYC",
+    "cftc_commodity_code": "088 ",
+    "commodity_name": "GOLD",
+    "open_interest_all": "399169",
+    "noncomm_positions_long_all": "220530",
+    "noncomm_positions_short_all": "40982",
+    "noncomm_postions_spread_all": "68289",
+    "comm_positions_long_all": "64326",
+    "comm_positions_short_all": "269228",
+    "tot_rept_positions_long_all": "353145",
+    "tot_rept_positions_short": "378499",
+    "nonrept_positions_long_all": "46024",
+    "nonrept_positions_short_all": "20670",
+    "change_in_open_interest_all": "2359",
+    "pct_of_open_interest_all": "100.0"
+  }
+]

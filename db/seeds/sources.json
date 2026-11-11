@@ -7,12 +7,12 @@
       "strip"
     ],
     "role": "Main: daily prices and the futures/VIX/DXY strip",
-    "status": "untested",
+    "status": "working",
     "priority": 1,
     "credentials_ref": null,
     "version_introduced": "v1.0",
-    "last_verified_on": null,
-    "notes": "Unofficial. Futures (=F) series are display-only, never backtested. Verified in Phase 0.5."
+    "last_verified_on": "2026-11-11",
+    "notes": "Unofficial, through yfinance. Verified: daily history for all 27 seeded symbols incl. the strip (ES=F, NQ=F, YM=F, RTY=F, GC=F, CL=F, SI=F, ^GSPC, ^VIX, DX-Y.NYB, ^TNX); intraday 1m (7 days), 5m (60 days), 1h (730 days). No spot gold symbol (XAUUSD=X not found). Futures (=F) series are display-only, never backtested."
   },
   {
     "id": "yahoo_rss",
@@ -21,12 +21,12 @@
       "news"
     ],
     "role": "Backup: company news",
-    "status": "untested",
+    "status": "working",
     "priority": 2,
     "credentials_ref": null,
     "version_introduced": "v1.0",
-    "last_verified_on": null,
-    "notes": "Verified in Phase 0.5."
+    "last_verified_on": "2026-11-11",
+    "notes": "feeds.finance.yahoo.com/rss/2.0/headline?s=SYMBOL. No key. Returns only the latest 20 items per symbol."
   },
   {
     "id": "finnhub",
@@ -151,12 +151,12 @@
       "search"
     ],
     "role": "Deep search",
-    "status": "untested",
+    "status": "working",
     "priority": 1,
     "credentials_ref": null,
     "version_introduced": "v1.0",
-    "last_verified_on": null,
-    "notes": "Runs in Docker Compose. Verified in Phase 0.5."
+    "last_verified_on": "2026-11-11",
+    "notes": "Runs in Docker Compose, JSON output. News category answered from bing news, brave.news, duckduckgo news, wikinews. Not answering on the verify date: google news (access denied), reuters (HTTP error), duckduckgo general (CAPTCHA)."
   },
   {
     "id": "cftc_cot",
@@ -165,11 +165,11 @@
       "positioning"
     ],
     "role": "COT history for backtests; live weekly job from v1.2",
-    "status": "untested",
+    "status": "working",
     "priority": 1,
     "credentials_ref": null,
     "version_introduced": "v1.0",
-    "last_verified_on": null,
-    "notes": "Free, no key. History back to 1986. Verified in Phase 0.5."
+    "last_verified_on": "2026-11-11",
+    "notes": "Free, no key. Socrata dataset 6dca-aqww (legacy, futures only). Gold (088691): weekly reports 1986-01-15 onwards. Report date is a Tuesday; published the following Friday."
   }
 ]

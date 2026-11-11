@@ -1,0 +1,61 @@
+{
+  "id": "thRecordCot00001",
+  "versionId": "6f1c2a50-0003-4b7e-9a11-7a2d5e0c0003",
+  "name": "TradeHub: record COT",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 22 * * 5"}]
+        }
+      },
+      "id": "thRecordCot00001-trigger",
+      "name": "Schedule (UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/jobs/record_cot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Trigger-Secret",
+              "value": "={{ $env.N8N_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "thRecordCot00001-request",
+      "name": "POST /jobs/record_cot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    }
+  ],
+  "connections": {
+    "Schedule (UTC)": {
+      "main": [
+        [
+          {
+            "node": "POST /jobs/record_cot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "pinData": {}
+}

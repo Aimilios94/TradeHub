@@ -1,0 +1,35 @@
+[
+  {
+    "category": "company",
+    "datetime": 1794427745,
+    "headline": "Synthetic Finnhub headline one",
+    "id": 900000001,
+    "image": "https://example.com/one.jpg",
+    "related": "TSLA",
+    "source": "Example Wire",
+    "summary": "Synthetic summary one.",
+    "url": "https://finnhub.io/api/news?id=synthetic0001"
+  },
+  {
+    "category": "company",
+    "datetime": 1794340800,
+    "headline": "Synthetic Finnhub headline two",
+    "id": 900000002,
+    "image": "",
+    "related": "TSLA",
+    "source": "Example Daily",
+    "summary": "",
+    "url": "https://example.com/markets/synthetic-two?utm_source=feed&id=7"
+  },
+  {
+    "category": "company",
+    "datetime": 1794340900,
+    "headline": "",
+    "id": 900000003,
+    "image": "",
+    "related": "TSLA",
+    "source": "Example Daily",
+    "summary": "An item with no headline must be skipped.",
+    "url": "https://example.com/markets/synthetic-three"
+  }
+]

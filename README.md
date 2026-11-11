@@ -2,7 +2,7 @@
 
 A personal web app that collects free market news and data, ranks what matters each day, has an LLM ("Hermes") explain it in plain words, and tests the owner's strategies on past data. Every trade is made by hand elsewhere: there is no broker connection and no live money in this app.
 
-**Status:** Phase 0 (Foundations) built. No market data is ingested yet. The full plan is in [docs/PLAN.pdf](docs/PLAN.pdf).
+**Status:** Phase 0 (Foundations) and Phase 0.5 (source validation, recorder, first snapshot) built. News and price recording has started; nothing is scored or shown yet. The full plan is in [docs/PLAN.pdf](docs/PLAN.pdf).
 
 ## Principles
 
@@ -18,7 +18,7 @@ A personal web app that collects free market news and data, ranks what matters e
 
 | Version | Scope | State |
 |---|---|---|
-| v1.0 (MVP) | Equities news pipeline, Dashboard, Market Pulse, Ticker Pages, daily-bar backtester with 6 starter strategies, Hermes evals | Phase 0 of 6 done |
+| v1.0 (MVP) | Equities news pipeline, Dashboard, Market Pulse, Ticker Pages, daily-bar backtester with 6 starter strategies, Hermes evals | Phases 0 and 0.5 done |
 | v1.0.5 | Paper sim, journal, morning briefing, Ask-Hermes | Planned |
 | v1.0.8 | Deep Analysis, strategy suggestions, regime filter | Planned |
 | v1.1 | Crypto | Planned |
@@ -69,6 +69,15 @@ Frontend (development):
 cd frontend && npm install && npm run dev    # http://localhost:5273
 ```
 
+Recording and snapshots:
+
+```sh
+docker compose exec n8n n8n import:workflow --separate --input=/workflows   # then publish each in the n8n editor
+docker compose exec api python -m scripts.backfill          # full daily history, recent intraday bars, COT
+docker compose exec api python -m scripts.snapshot freeze   # frozen copy in data/v<date>/, registered in `datasets`
+docker compose exec api python -m scripts.snapshot verify v2026-11-11
+```
+
 Tests and lint:
 
 ```sh
@@ -81,13 +90,13 @@ cd backend && uv run ruff check . ../db
 ```
 backend/app/      ingest, scoring, tagger, hermes, market, backtest, data, api
 backend/tests/    pytest suite
-backend/scripts/  CLI entry points (seeds now; backfill and evals later)
+backend/scripts/  CLI entry points (seeds, backfill, snapshot; evals later)
 backend/eval/     eval results and baselines (from Phase 1)
 frontend/         React + Vite
 strategies/       one JSON config per strategy (Phase 3)
 db/               Alembic migrations, config seeds, backup script
 n8n/              workflow exports (triggers only)
-data/             Parquet snapshots (git-ignored)
+data/             live recordings and frozen Parquet snapshots (git-ignored)
 sample-data/      golden day and small samples for CI (from Phase 1)
 docs/             plan, data sources, backtesting method, monitoring, privacy
 ```

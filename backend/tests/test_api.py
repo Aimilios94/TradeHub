@@ -21,7 +21,7 @@ def client(migrated_engine, seeds_dir, monkeypatch):
 def test_health_reports_the_schema_revision(client):
     body = client.get("/health").json()
     assert body["ok"] is True
-    assert body["database"]["schema_revision"] == "0001"
+    assert body["database"]["schema_revision"] == "0002"
 
 
 def test_health_is_503_with_the_real_error_when_the_database_is_down(client, monkeypatch):

@@ -1,0 +1,61 @@
+{
+  "id": "thRecordNews0001",
+  "versionId": "6f1c2a50-0001-4b7e-9a11-7a2d5e0c0001",
+  "name": "TradeHub: record news",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 7,13 * * *"}, {"field": "cronExpression", "expression": "30 21 * * *"}]
+        }
+      },
+      "id": "thRecordNews0001-trigger",
+      "name": "Schedule (UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/jobs/record_news",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Trigger-Secret",
+              "value": "={{ $env.N8N_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "thRecordNews0001-request",
+      "name": "POST /jobs/record_news",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    }
+  ],
+  "connections": {
+    "Schedule (UTC)": {
+      "main": [
+        [
+          {
+            "node": "POST /jobs/record_news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "pinData": {}
+}

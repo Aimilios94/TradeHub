@@ -8,8 +8,8 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 
 | Source | Role | Status | Key | Last verified |
 |---|---|---|---|---|
-| Yahoo Finance (yfinance) | Main: daily prices, futures/VIX/DXY strip | untested | none | – |
-| Yahoo RSS | Backup: company news | untested | none | – |
+| Yahoo Finance (yfinance) | Main: daily prices, futures/VIX/DXY strip, recent intraday | working | none | 2026-11-11 |
+| Yahoo RSS | Backup: company news (recorded alongside Finnhub) | working | none | 2026-11-11 |
 | Finnhub | Main: quotes, company news. Backup: earnings | working | `FINNHUB_API_KEY` | 2026-11-11 |
 | FMP | Main: earnings calendar. Fundamentals from v1.0.8 | working | `FMP_API_KEY` | 2026-11-11 |
 | Tiingo | Backup: daily prices; backfill cross-check | working | `TIINGO_API_KEY` | 2026-11-11 |
@@ -18,8 +18,8 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 | FRED / ALFRED | Main: macro, rates, Fed panel | working | `FRED_API_KEY` | 2026-11-11 |
 | BLS | Backup: CPI/NFP release dates | working | `BLS_API_KEY` | 2026-11-11 |
 | StockTwits | Additive: bull/bear ratio | working | none | 2026-11-11 |
-| SearXNG (self-hosted) | Deep search | untested as a source | none | – |
-| CFTC COT (Socrata) | Positioning history | untested | none | – |
+| SearXNG (self-hosted) | Deep search | working | none | 2026-11-11 |
+| CFTC COT (Socrata) | Positioning history | working | none | 2026-11-11 |
 
 ## Fallback order
 
@@ -32,6 +32,32 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 | Social sentiment | News-only by default; StockTwits is added when it has enough labeled messages |
 
 If every source for a need fails, the UI shows the last value with a stale label and the real error. Nothing is filled in.
+
+## Fallback decisions (Phase 0.5)
+
+| Gap found | Decision |
+|---|---|
+| Stooq needs a key that has not arrived | Stays `pending`. Nothing depends on it; the adapter is written when the key arrives |
+| Twelve Data free plan has no indices or futures | Not a strip backup for those. It covers spot gold only |
+| Futures on the strip (ES, NQ, YM, RTY, GC, CL, SI) have no working backup | If Yahoo fails they show the last value with a stale label and the error. They are display-only, so no backtest is affected |
+| VIX and US10Y backup | FRED `VIXCLS` and `DGS10`, one day late, labeled as delayed |
+| DXY backup | None free. FRED `DTWEXBGS` (broad dollar index) is a different index and is shown under its own name, never as DXY |
+| Yahoo has no spot gold symbol (`XAUUSD=X` is not found) | Spot gold comes from Twelve Data `XAU/USD` only |
+| SearXNG engines that refuse (Google News, Reuters, DuckDuckGo general) | Accepted. Other engines answer; the check reports which ones did not |
+| Yahoo RSS holds only the latest 20 items per symbol | Finnhub is the main news source (date-range queries); RSS is recorded as well to widen coverage |
+
+## What the recorder stores
+
+| Data | From | Where | Schedule (UTC) |
+|---|---|---|---|
+| News headlines, link, short excerpt, the ticker it was fetched for | Finnhub and Yahoo RSS, watchlist tickers | PostgreSQL `news_items` | 07:00, 13:00, 21:30 daily |
+| Daily bars, full history | Yahoo, every seeded ticker with a Yahoo symbol (27) | `data/live/bars_daily/` | 22:30 daily |
+| Intraday bars: 1m, 5m, 1h, regular session | Yahoo, watchlist tickers (16) | `data/live/bars_intraday/` | 22:30 daily |
+| COT, legacy futures-only | CFTC, tickers with a `cftc` market code (gold) | `data/live/cot/` | Friday 22:00 |
+
+Yahoo serves 1-minute bars for the last 7 days only, 5-minute for 60 days and hourly for 730 days. Each run asks for the last 7 days, so a few missed days fill in on the next run; after a longer gap it asks for the longest window allowed. Bars still forming when a run happens are not stored.
+
+`data/live/` is the only place that changes. A backtest never reads it: it reads a frozen snapshot (`data/<version>/`), see [BACKTESTING.md](BACKTESTING.md).
 
 ## Notes per source
 
@@ -70,11 +96,25 @@ If every source for a need fails, the UI shows the last value with a stale label
 - Each call returns only recent messages, so the sample is small. Below a minimum number of labeled messages, or when the endpoint fails, that ticker's score is news-only.
 
 ### Yahoo
-- Unofficial endpoints that can change without notice; contract tests will catch shape changes.
-- Futures (`=F`) series are for display only and are never used in backtests.
+- Unofficial endpoints, through the `yfinance` library; they can change without notice. Contract tests catch shape changes.
+- Verified: daily history for all 27 seeded symbols. Strip symbols: `ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `GC=F`, `CL=F`, `SI=F`, `^GSPC`, `^VIX`, `DX-Y.NYB`, `^TNX`. Intraday: 1m, 5m, 1h.
+- Prices: open, high, low and close are adjusted for splits but not for dividends. `Adj Close` is adjusted for both and is stored as its own column, with dividends and split ratios beside it.
+- Futures (`=F`) series are front-month with no roll adjustment. They are for display only and are never used in backtests. Yahoo's futures history holds a few odd rows (crude's negative close on 2020-04-20 is real; one gold row has its high below its low). They are stored as received.
+- No spot gold: `XAUUSD=X` is not found.
+
+### Yahoo RSS
+- `https://feeds.finance.yahoo.com/rss/2.0/headline?s=SYMBOL&region=US&lang=en-US`. No key.
+- Returns the latest 20 items for the symbol: title, link, publication time, short description.
 
 ### SearXNG
-- Runs in Docker Compose with JSON output enabled. The container answers queries; on 2026-11-11 the DuckDuckGo engine returned a CAPTCHA while other engines returned results.
+- Runs in Docker Compose with JSON output enabled.
+- Verified 2026-11-11 with a news query: results from Bing News, Brave News, DuckDuckGo News and Wikinews. Google News answered "access denied", Reuters an HTTP error, and the general DuckDuckGo engine a CAPTCHA. No attempt is made to get around these.
+
+### CFTC COT
+- Socrata dataset `6dca-aqww` (legacy report, futures only) at `publicreporting.cftc.gov`. No key.
+- Gold is contract market code `088691`: 1,941 weekly reports from 1986-01-15.
+- A report shows positions as of a Tuesday and is published the following Friday. Backtests must not use a row before its release.
+- A ticker gets COT history when its `source_symbols` in `db/seeds/tickers.json` has a `cftc` code.
 
 ## Not used
 

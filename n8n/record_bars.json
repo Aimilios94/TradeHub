@@ -1,0 +1,61 @@
+{
+  "id": "thRecordBars0001",
+  "versionId": "6f1c2a50-0002-4b7e-9a11-7a2d5e0c0002",
+  "name": "TradeHub: record bars",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "30 22 * * *"}]
+        }
+      },
+      "id": "thRecordBars0001-trigger",
+      "name": "Schedule (UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/jobs/record_bars",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Trigger-Secret",
+              "value": "={{ $env.N8N_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "thRecordBars0001-request",
+      "name": "POST /jobs/record_bars",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    }
+  ],
+  "connections": {
+    "Schedule (UTC)": {
+      "main": [
+        [
+          {
+            "node": "POST /jobs/record_bars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rss version="2.0">
+    <channel>
+        <copyright>Copyright (c) 2026 Yahoo Inc. All rights reserved.</copyright>
+        <description>Latest Financial News for TSLA</description>
+        <image>
+            <height>45</height>
+            <link>http://finance.yahoo.com/q/h?s=TSLA</link>
+            <title>Yahoo! Finance: TSLA News</title>
+            <url>https://example.com/logo.png</url>
+            <width>144</width>
+        </image>
+        <language>en-US</language>
+        <lastBuildDate>Wed, 11 Nov 2026 21:21:44 +0000</lastBuildDate>
+        <link>http://finance.yahoo.com/q/h?s=TSLA</link>
+        <title>Yahoo! Finance: TSLA News</title>
+        <item>
+            <description>Synthetic excerpt one. The company said deliveries rose in the quarter...</description>
+            <guid isPermaLink="false">00000000-0000-0000-0000-000000000001</guid>
+            <link>https://finance.yahoo.com/news/synthetic-article-one-200905110.html?.tsrc=rss</link>
+            <pubDate>Wed, 11 Nov 2026 20:09:05 +0000</pubDate>
+            <title>Synthetic headline one &amp; an ampersand</title>
+        </item>
+        <item>
+            <description>Synthetic excerpt two.</description>
+            <guid isPermaLink="false">00000000-0000-0000-0000-000000000002</guid>
+            <link>https://finance.yahoo.com/news/synthetic-article-two-150000000.html?.tsrc=rss</link>
+            <pubDate>Tue, 10 Nov 2026 15:00:00 +0000</pubDate>
+            <title>Synthetic headline two</title>
+        </item>
+        <item>
+            <description></description>
+            <guid isPermaLink="false">00000000-0000-0000-0000-000000000003</guid>
+            <link>https://finance.yahoo.com/news/synthetic-article-three-090000000.html?.tsrc=rss</link>
+            <pubDate>Sun, 08 Nov 2026 09:00:00 +0000</pubDate>
+            <title>Synthetic headline three, no excerpt</title>
+        </item>
+    </channel>
+</rss>

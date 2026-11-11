@@ -84,6 +84,8 @@ services:
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
     volumes:
       - n8n_data:/home/node/.n8n
+      # Workflow exports from the repo, for: n8n import:workflow --separate --input=/workflows
+      - ./n8n:/workflows:ro
     ports:
       - "127.0.0.1:${N8N_PORT:-5680}:5678"
 

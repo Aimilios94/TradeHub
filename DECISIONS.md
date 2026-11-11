@@ -39,6 +39,23 @@ Every locked or rejected decision with its reason. Settled items are not re-open
 | D26 | Python 3.12 in Docker and CI | Data libraries used later lag the newest Python release |
 | D27 | Host ports: API 8100, SearXNG 8888, n8n 5680, Vite 5273, all on 127.0.0.1 | 8000 and 5173 are used by other projects on the machine |
 
+## Decided during Phase 0.5 (2026-11-11)
+
+| # | Decision | Reason |
+|---|---|---|
+| D28 | The recorder stores news from both Finnhub and Yahoo RSS, not RSS only when Finnhub fails | The aim is to build history; RSS holds only 20 items per symbol. Phase 1 dedupe handles overlaps |
+| D29 | `news_items.source_tickers` (migration `0002`) holds the tickers the source attached to a headline | News is fetched per ticker; without it that link is lost until the condenser runs |
+| D30 | Recordings go to `data/live/`; a snapshot is a frozen copy in `data/<version>/` named `v<UTC date>` | Only one place changes; backtests read only frozen data |
+| D31 | A snapshot holds only rows dated before the freeze day (UTC) | A bar still forming on the freeze day can never be frozen |
+| D32 | Intraday recording: 1m, 5m and 1h for the watchlist. Daily bars: every seeded ticker with a Yahoo symbol | 5m and 1h give 60 days and 2 years of history at once; 1m only builds from now |
+| D33 | Schedules in UTC: bars 22:30 daily, news 07:00, 13:00 and 21:30 daily, COT Friday 22:00 | After the US close; daily runs so a missed run is covered by the next |
+| D34 | A job with any failure answers HTTP 502 with the full result. What succeeded is still stored | The n8n run shows as failed and the real errors are visible |
+| D35 | Yahoo open/high/low/close are stored as received (split-adjusted), with `adj_close`, dividends and split ratios as separate columns | Yahoo does not serve prices unadjusted for splits; the manifest states the method |
+| D36 | Spot gold comes from Twelve Data only | Yahoo has no `XAUUSD=X` |
+| D37 | COT uses the CFTC legacy futures-only report; gold only for now | Longest history (1986); the only starter strategy that needs COT is Gold + Dollar + COT |
+| D38 | Keys go in request headers where the provider allows it, and every stored error is scrubbed of key-like text | A key must not reach `sources.last_error`, a log or the UI |
+| D39 | n8n workflows are imported from `n8n/*.json` and published by hand in the n8n editor | The n8n 2.x command line can import a workflow but cannot publish one |
+
 ## Rejected
 
 | Item | Reason |

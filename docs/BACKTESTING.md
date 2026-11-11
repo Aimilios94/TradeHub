@@ -37,6 +37,8 @@ All figures are **after costs**. These are the owner's starting values (set 2026
 ## Reproducibility
 
 - A backtest reads a named, frozen Parquet snapshot, never live data. Snapshots are never edited; new data is a new snapshot.
+- A snapshot is a folder `data/<version>/` with one Parquet file per table (`bars_daily`, `bars_intraday`, `cot`) and `manifest.json`: sources, date range, row counts, symbols and a SHA-256 per file. The combined hash is also stored in the `datasets` table. `python -m scripts.snapshot verify <version>` re-hashes the files and compares.
+- A snapshot holds only rows dated before the day it was frozen (UTC), so a bar still forming cannot be in it.
 - Same config and same snapshot must give byte-identical metrics. CI enforces this on the committed sample.
 - Each result stores the config hash, dataset version, fill parameters and code version.
 - At least one strategy (gap fade) is also run in backtesting.py; results must match within a small tolerance stated in that strategy's RESULTS.md.
@@ -46,7 +48,8 @@ All figures are **after costs**. These are the owner's starting values (set 2026
 
 - News uses `ingested_at`, not `published_at`.
 - Macro series use first-published values (ALFRED vintages).
-- Raw OHLC and adjusted close are stored as separate columns; the adjustment method is written in the snapshot manifest.
+- Raw OHLC and adjusted close are stored as separate columns; the adjustment method is written in the snapshot manifest. With Yahoo data, open/high/low/close are adjusted for splits but not for dividends; `adj_close` is adjusted for both.
+- COT rows carry the report date (a Tuesday). The report is published the following Friday, so a strategy may use a row only from that Friday on.
 
 ## Instruments
 

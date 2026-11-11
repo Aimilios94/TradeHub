@@ -19,10 +19,11 @@ Six MVP phases over about 16 part-time weeks, then five later versions. A phase 
 
 ### Phase 0.5 — Source validation + start recording (week 3)
 
-- [ ] Every v1.0 source: one successful call, logged in `docs/DATA_SOURCES.md` (7 keyed sources and StockTwits done; Yahoo, SearXNG adapter, CFTC COT remaining)
-- [ ] Record the fallback decision for each failure
-- [ ] Daily recorder: news headlines, daily and intraday bars for the watchlist
-- [ ] First daily backfill, frozen as snapshot v1
+- [x] Every v1.0 source: one successful call, logged in `docs/DATA_SOURCES.md` (Stooq is the exception: pending a key)
+- [x] Record the fallback decision for each failure
+- [x] Daily recorder built: news headlines, daily and intraday bars for the watchlist
+- [ ] Recorder schedules published in n8n and seen running on their own
+- [x] First daily backfill, frozen as snapshot v1
 
 **Accept:** every source marked working, fallback or dropped; recorder running daily; snapshot v1 in `datasets`.
 

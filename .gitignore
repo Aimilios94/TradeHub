@@ -4,7 +4,8 @@
 !.env.example
 
 # Data snapshots and local databases (plan: data/ is git-ignored)
-data/
+# Anchored to the repo root: backend/app/data/ is code and must be committed.
+/data/
 *.duckdb
 *.duckdb.wal
 backups/

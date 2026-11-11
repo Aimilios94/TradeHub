@@ -8,10 +8,24 @@ What is watched and where to look. Items marked "planned" are designed but not b
 - `GET /health/deps` — database, SearXNG and Ollama, each with its own state and error.
 - `docker compose ps` — container state. The `api` container has a health check.
 
-## Source health (table built, writers planned for Phase 0.5)
+## Source health (built)
 
 - The `sources` table holds `last_success_at`, `last_error_at` and `last_error` per source, shown by `GET /api/sources` and on the status page.
-- Each ingest job will update its own row. A failed source keeps its last data with a stale label; no rows are invented.
+- Every job that calls a source updates that source's row. A source is healthy when its last success is newer than its last error.
+- `last_error` is the real error text with anything key-like removed.
+- `POST /jobs/check_sources` makes one real call per adapter (Yahoo, Yahoo RSS, Finnhub, SearXNG, CFTC) and updates their rows.
+- A failed source keeps its last data with a stale label; no rows are invented.
+
+## Recorder jobs (built)
+
+- `record_news`, `record_bars` and `record_cot` are triggered by n8n. Each answers with what was stored and every error.
+- A run with any failure answers HTTP 502, so it shows as a failed execution in n8n (Executions tab).
+- A job that is still running refuses a second trigger with HTTP 409.
+
+## Snapshots (built)
+
+- `docker compose exec api python -m scripts.snapshot list` shows the registered snapshots.
+- `docker compose exec api python -m scripts.snapshot verify <version>` re-hashes a snapshot and reports any difference from its manifest and from the `datasets` table.
 
 ## Hermes calls (table built, writers planned for Phase 1)
 

@@ -1,0 +1,42 @@
+{
+  "query": "S&P 500 stock market",
+  "number_of_results": 0,
+  "results": [
+    {
+      "url": "https://example.com/news/synthetic-search-one",
+      "title": "Synthetic search result one",
+      "content": "Synthetic snippet one.",
+      "thumbnail": "",
+      "metadata": "3 hours ago | Example",
+      "engine": "bing news",
+      "template": "default.html",
+      "parsed_url": ["https", "example.com", "/news/synthetic-search-one", "", "", ""],
+      "img_src": "",
+      "priority": "",
+      "engines": ["bing news", "duckduckgo news"],
+      "positions": [1, 1],
+      "score": 4.0,
+      "category": "news",
+      "publishedDate": null,
+      "iframe_src": null
+    },
+    {
+      "url": "https://example.org/markets/synthetic-search-two",
+      "title": "Synthetic search result two",
+      "content": "",
+      "engine": "bing news",
+      "template": "default.html",
+      "parsed_url": ["https", "example.org", "/markets/synthetic-search-two", "", "", ""],
+      "engines": ["bing news"],
+      "positions": [2],
+      "score": 0.5,
+      "category": "news",
+      "publishedDate": null
+    }
+  ],
+  "answers": [],
+  "corrections": [],
+  "infoboxes": [],
+  "suggestions": [],
+  "unresponsive_engines": [["google news", "access denied"], ["reuters", "HTTP error"]]
+}

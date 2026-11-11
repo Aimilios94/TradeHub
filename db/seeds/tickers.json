@@ -242,7 +242,8 @@
       "gold"
     ],
     "source_symbols": {
-      "yahoo": "GC=F"
+      "yahoo": "GC=F",
+      "cftc": "088691"
     },
     "sector": null
   },
@@ -340,7 +341,6 @@
       "gold spot"
     ],
     "source_symbols": {
-      "yahoo": "XAUUSD=X",
       "twelvedata": "XAU/USD"
     },
     "sector": null
