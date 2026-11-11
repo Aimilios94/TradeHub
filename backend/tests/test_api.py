@@ -39,7 +39,7 @@ def test_sources_lists_every_seeded_source_without_any_key(client, seeds_dir):
     assert {row["id"] for row in rows} == {row["id"] for row in seeded}
     assert all("credentials_ref" not in row for row in rows)
     stooq = next(row for row in rows if row["id"] == "stooq")
-    assert stooq["status"] == "pending"
+    assert stooq["status"] == "dropped"
 
 
 def test_jobs_reject_a_missing_or_wrong_secret(client, monkeypatch):

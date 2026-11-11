@@ -2,7 +2,7 @@
 
 Each source: status, limits, fallback and the date it was last verified. The same facts are seeded into the `sources` table from `db/seeds/sources.json`; change both together. Re-check every free tier quarterly.
 
-**Status menu:** working (one successful call on the date shown), pending (waiting on something outside the project), untested (not yet called), dropped.
+**Status menu:** working (one successful call on the date shown), fallback, dropped (not used; the reason is in the notes), and, while a phase is still checking sources, pending and untested. Since Phase 0.5 closed, every source is working or dropped.
 
 ## Summary
 
@@ -15,7 +15,7 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 | Tiingo | Backup: daily prices; backfill cross-check | working | `TIINGO_API_KEY` | 2026-11-11 |
 | Twelve Data | Strip backup, limited (see below) | working | `TWELVEDATA_API_KEY` | 2026-11-11 |
 | Massive (ex-Polygon) | Backup: futures on the strip. Additive: company news | working | `MASSIVE_API_KEY` | 2026-11-11 |
-| Stooq | Second strip backup once keyed | pending | `STOOQ_API_KEY` | 2026-11-11 |
+| Stooq | Not used. Would be a second strip backup | dropped (key pending) | `STOOQ_API_KEY` | 2026-11-11 |
 | FRED / ALFRED | Main: macro, rates, Fed panel | working | `FRED_API_KEY` | 2026-11-11 |
 | BLS | Backup: CPI/NFP release dates | working | `BLS_API_KEY` | 2026-11-11 |
 | StockTwits | Additive: bull/bear ratio | working | none | 2026-11-11 |
@@ -27,7 +27,7 @@ Each source: status, limits, fallback and the date it was last verified. The sam
 | Need | Order |
 |---|---|
 | Daily prices (stocks, ETFs) | Yahoo, then Tiingo |
-| Strip: futures (ES, NQ, YM, RTY, GC, CL, SI) | Yahoo, then Massive (about 8 hours late), then Stooq (pending key) |
+| Strip: futures (ES, NQ, YM, RTY, GC, CL, SI) | Yahoo, then Massive (about 8 hours late) |
 | Strip: VIX, US10Y | Yahoo, then FRED `VIXCLS` and `DGS10` (one day late) |
 | Strip: DXY | Yahoo only. No free backup |
 | Spot gold | Twelve Data `XAU/USD` |
@@ -42,7 +42,7 @@ If every source for a need fails, the UI shows the last value with a stale label
 
 | Gap found | Decision |
 |---|---|
-| Stooq needs a key that has not arrived | Stays `pending`. Massive is the futures backup meanwhile; the Stooq adapter is written when the key arrives |
+| Stooq needs a key that has not arrived | `dropped` (key pending). Nothing waits on it; Massive is the futures backup. It goes back to `working` only if a key arrives and an adapter passes its contract test |
 | Twelve Data free plan has no indices or futures | Not a strip backup for those. It covers spot gold only |
 | Futures on the strip (ES, NQ, YM, RTY, GC, CL, SI) needed a backup | Massive free plan, verified for all seven. Its data is about 8 hours late and is labeled as delayed. Display-only, so no backtest is affected |
 | VIX and US10Y backup | FRED `VIXCLS` and `DGS10`, one day late, labeled as delayed |
@@ -94,7 +94,8 @@ Yahoo serves 1-minute bars for the last 7 days only, 5-minute for 60 days and ho
 
 ### Stooq
 - The CSV endpoint `https://stooq.com/q/d/l/?s=SYMBOL&i=d` works in a browser session. A script receives an HTML page: programmatic access needs an API key (policy since April 2026).
-- A key was requested by email on 2026-11-11. When it arrives it goes into `STOOQ_API_KEY`; the adapter is written and contract-tested then.
+- Status: dropped (key pending). A key was requested by email on 2026-11-11 and has not arrived. No adapter exists and nothing depends on Stooq.
+- If a key arrives: it goes into `STOOQ_API_KEY`, the adapter is written and contract-tested, and the status goes back to working.
 - Format when keyed: `Date,Open,High,Low,Close,Volume`, daily bars. Display-only, never backtested.
 
 ### FRED / ALFRED

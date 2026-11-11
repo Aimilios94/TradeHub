@@ -6,7 +6,7 @@ One entry per version. Phases of the MVP are listed under "Unreleased" until v1.
 
 ### Phase 0.5 — Source validation and recording (2026-11-11)
 
-- Verified with real calls: Yahoo Finance (daily, strip symbols, intraday), Yahoo RSS, SearXNG, CFTC COT. Every v1.0 source now has a status and a verified date; Stooq stays pending a key.
+- Verified with real calls: Yahoo Finance (daily, strip symbols, intraday), Yahoo RSS, SearXNG, CFTC COT. Every v1.0 source is now working or dropped: 12 working, and Stooq dropped (key pending). The source seed holds 13 rows.
 - Source-adapter interface in `backend/app/ingest/` with adapters for Yahoo Finance, Yahoo RSS, Finnhub news, SearXNG and CFTC COT.
 - Source-health writer: every job records each source's last success and last error, with keys removed from error text.
 - Recorder jobs `record_news`, `record_bars`, `record_cot` and `check_sources` behind `/jobs/...`; three n8n workflow exports in `n8n/`.

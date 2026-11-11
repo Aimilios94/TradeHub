@@ -108,13 +108,13 @@
     "kinds": [
       "strip"
     ],
-    "role": "Second backup for the strip once a key arrives",
-    "status": "pending",
+    "role": "Dropped (key pending). Would be a second strip backup",
+    "status": "dropped",
     "priority": 3,
     "credentials_ref": "STOOQ_API_KEY",
     "version_introduced": "v1.0",
     "last_verified_on": "2026-11-11",
-    "notes": "CSV works in a browser session; programmatic access needs an API key (policy since 2026-04). Key requested by email 2026-11-11. Format when keyed: /q/d/l/?s=SYMBOL&i=d, Date,Open,High,Low,Close,Volume."
+    "notes": "Dropped 2026-11-11: programmatic access needs an API key (policy since 2026-04); a key was requested by email and has not arrived. Nothing waits on it: Massive is the futures backup. No adapter is written. If a key arrives: put it in STOOQ_API_KEY, write and contract-test the adapter, set the status back to working. Format when keyed: /q/d/l/?s=SYMBOL&i=d, Date,Open,High,Low,Close,Volume."
   },
   {
     "id": "fred",

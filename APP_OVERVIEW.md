@@ -12,10 +12,11 @@ What each section of TradeHub does. Seven sections; the MVP (v1.0) builds five, 
 | 6 | **Smart Money** | SEC Form 4 and 13F insider filings | v1.3 |
 | 7 | **Settings / Sources** | Source toggles, scrape depth, LLM budget, source health (last success, last error) | v1.0 |
 
-## What exists today (Phase 0)
+## What exists today (Phases 0 and 0.5)
 
-- A status page that reads the API: service health (database, SearXNG, Ollama) and the source registry with each source's verified status.
-- No market data, news or Hermes text yet.
+- A status page that reads the API: service health (database, SearXNG, Ollama) and the source registry with each source's status, last success and last error.
+- A recorder, triggered by n8n: news headlines into PostgreSQL, daily and intraday bars and gold COT into Parquet. One frozen snapshot.
+- Nothing is ranked, scored, explained or backtested yet, and no Hermes text exists.
 
 ## How the pieces fit
 

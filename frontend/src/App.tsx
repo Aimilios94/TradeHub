@@ -29,7 +29,7 @@ export default function App() {
     <main>
       <header>
         <h1>TradeHub</h1>
-        <p className="muted">Phase 0 · system status. The Dashboard arrives in Phase 2.</p>
+        <p className="muted">System status and source health. The Dashboard arrives in Phase 2.</p>
       </header>
 
       <section>

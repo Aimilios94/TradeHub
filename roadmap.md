@@ -19,7 +19,7 @@ Six MVP phases over about 16 part-time weeks, then five later versions. A phase 
 
 ### Phase 0.5 — Source validation + start recording (week 3)
 
-- [x] Every v1.0 source: one successful call, logged in `docs/DATA_SOURCES.md` (Stooq stays pending a key by the owner's choice; Massive is the futures backup meanwhile)
+- [x] Every v1.0 source: one successful call, logged in `docs/DATA_SOURCES.md` (12 working; Stooq dropped, key pending; Massive is the futures backup)
 - [x] Record the fallback decision for each failure
 - [x] Daily recorder built: news headlines, daily and intraday bars for the watchlist
 - [x] Recorder schedules published in n8n and seen running on their own (first scheduled run 2026-11-11 22:30 UTC)

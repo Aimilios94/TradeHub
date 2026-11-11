@@ -28,8 +28,8 @@ Every locked or rejected decision with its reason. Settled items are not re-open
 | D15 | Seed watchlist: SPY, QQQ, GLD, TSLA, NVDA and the 11 sector ETFs; everything else is added in the UI | Owner's choice |
 | D16 | Alerts go to Telegram, sent by n8n | Owner's choice; wired when alerts are built |
 | D17 | TradeHub runs its own n8n container on host port 5680 | Independent of other projects on the same machine |
-| D18 | Strip source order: Yahoo, then Twelve Data, then Stooq | See D19 and D20 |
-| D19 | Stooq is "pending": programmatic access needs an API key, requested 2026-11-11 | Scripts get an HTML page instead of CSV |
+| D18 | Strip source order: Yahoo, then Twelve Data, then Stooq. Superseded by D40 and D43 | See D19 and D20 |
+| D19 | Stooq is "pending": programmatic access needs an API key, requested 2026-11-11. Superseded by D43 | Scripts get an HTML page instead of CSV |
 | D20 | Twelve Data free plan is not treated as a strip backup for indices or futures | Probe: SPX and GC need paid plans; VIX, DXY, NQ rejected |
 | D21 | StockTwits is additive only, with a minimum count of labeled messages before it enters the composite score | Each call returns a small sample of recent messages |
 | D22 | Fixed menus (catalyst type, directions, statuses) are CHECK constraints in PostgreSQL as well as Pydantic rules | A bad value cannot be stored even if validation is bypassed |
@@ -58,6 +58,7 @@ Every locked or rejected decision with its reason. Settled items are not re-open
 | D40 | Massive (ex-Polygon) free plans are used as the futures backup for the strip, ahead of Stooq, and as a third news feed. Yahoo stays the main source | Owner's decision, 2026-11-11. Twelve Data has no futures and Stooq has not answered; Massive was verified for all 7 futures. This reverses the earlier rejection, which was about stock prices |
 | D41 | The futures backup shows the most active of the 4 nearest contracts, not the nearest by expiry | The nearest is often an untraded serial month |
 | D42 | A sentiment label that a provider attaches to a headline is stored in `news_items.source_meta` (migration `0003`) as a reference only | It is another model's opinion: never TradeHub's sentiment, never an eval label (D10) |
+| D43 | Stooq is `dropped` (key pending), not waiting. It returns to `working` only if a key arrives and an adapter passes its contract test | Owner's decision, 2026-11-11. The acceptance list needs a final state for every source, and nothing depends on Stooq |
 
 ## Rejected
 
