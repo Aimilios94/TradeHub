@@ -1,0 +1,322 @@
+{
+  "version": "tagger-v1",
+  "note": "Keyword rules for the 7 locked driver tags. Patterns are regular expressions matched against the headline title only, case-insensitive, on word boundaries. direction: +1 / -1 as defined in driver_taxonomy, 0 = the topic is present but the direction is unclear. A rule with 'excludes' does not fire when that pattern is also found. scheduled = true marks an event known in advance.",
+  "rules": [
+    {
+      "id": "geo_escalation",
+      "driver": "geopolitical",
+      "direction": 1,
+      "patterns": [
+        "war (in|with|on)(?! (drugs|inflation|prices|talent|poverty))",
+        "declares? war",
+        "invasion|invades?",
+        "(missile|air|drone|military) ?(strike|attack)s?",
+        "(military|geopolitical|middle east|border) (escalation|conflict)",
+        "tensions? (rise|rises|flare|flares|escalate|escalates|mount|mounts|grow|grows|spike|spikes|soar|soars)",
+        "(rising|escalating|mounting|growing|heightened) (\\w+ ){0,3}tensions?",
+        "escalat\\w+ (in|of|with) .*(conflict|tensions?|war)",
+        "(new|fresh|more|tougher|sweeping) sanctions",
+        "sanctions (on|against)",
+        "(imposes?|raises?|hikes?|threatens?|announces?|new|fresh|more|higher) tariffs?",
+        "tariff (hike|threat|increase|escalation)s?",
+        "trade war (escalat\\w+|heats up|intensifies|fears?)",
+        "(new|fresh|tighter|tougher|expanded|expands?|imposes?|tightens?) (\\w+ ){0,2}export (ban|curbs?|controls?|restrictions?)",
+        "blockade"
+      ],
+      "excludes": "(end|ends|ending|ended|after|post)[- ](the )?war"
+    },
+    {
+      "id": "geo_deescalation",
+      "driver": "geopolitical",
+      "direction": -1,
+      "patterns": [
+        "cease-?fire",
+        "truce",
+        "peace (deal|talks|agreement|plan|accord)",
+        "de-?escalat\\w+",
+        "sanctions (relief|lifted|eased|removed)",
+        "(lifts?|eases?|removes?) sanctions",
+        "tariff (cut|pause|relief|rollback|exemption|reduction)s?",
+        "(cuts?|pauses?|lowers?|removes?|rolls? back|suspends?|delays?) tariffs?",
+        "trade (deal|agreement) (reached|signed|struck|announced)",
+        "(end|ends|ending|ended) (the )?war",
+        "(easing|eased|cooling|fading|receding) (\\w+ ){0,3}tensions?",
+        "tensions? (ease|eases|cool|cools|fade|fades|subside|subsides|recede|recedes)"
+      ]
+    },
+    {
+      "id": "geo_topic",
+      "driver": "geopolitical",
+      "direction": 0,
+      "patterns": [
+        "sanctions?",
+        "tariffs?",
+        "trade war",
+        "geopolitic\\w+",
+        "(geopolitical|middle east) (tensions?|risks?)",
+        "export (ban|curbs?|controls?|restrictions?)",
+        "war (in|with|on)(?! (drugs|inflation|prices|talent|poverty))"
+      ]
+    },
+    {
+      "id": "monetary_hawkish",
+      "driver": "monetary",
+      "direction": 1,
+      "patterns": [
+        "rate hikes?",
+        "(hikes?|raises?|lifts?) (interest |policy |benchmark )?rates?",
+        "hawkish",
+        "higher for longer",
+        "(fewer|slower|delay\\w*|postpon\\w*|no|rules? out|pauses?|pausing) (\\w+ ){0,2}(rate )?cuts?",
+        "hot(ter)?([- ]than[- ]expected)? (cpi|ppi|inflation)",
+        "inflation (accelerates|heats up|surges|jumps|rises|climbs|picks up|reaccelerates)",
+        "(cpi|ppi) (rises|jumps|surges|climbs|accelerates|tops|beats)",
+        "(treasury |bond )?yields? (surge|jump|spike|climb|rise|soar)s?",
+        "(surging|rising|soaring|climbing|higher) (treasury |bond )?yields?",
+        "((half|quarter)-point|\\d+ ?bps|\\d+[- ]basis[- ]points?) (rate )?hike",
+        "(fed |rate )?hike (fears?|bets?|odds|risk)"
+      ]
+    },
+    {
+      "id": "monetary_dovish",
+      "driver": "monetary",
+      "direction": -1,
+      "patterns": [
+        "rate cuts?",
+        "(cuts?|lowers?|slashes?|trims?) (interest |policy |benchmark )?rates?",
+        "dovish",
+        "easing cycle",
+        "cool(er|ing)?([- ]than[- ]expected)? (cpi|ppi|inflation)",
+        "inflation (cools|eases|slows|falls|drops|moderates|retreats)",
+        "(cpi|ppi) (falls|drops|cools|eases|slows|misses)",
+        "(treasury |bond )?yields? (fall|drop|slide|tumble|decline|sink|ease|retreat)s?",
+        "(falling|sliding|tumbling|lower) (treasury |bond )?yields?",
+        "((half|quarter)-point|\\d+ ?bps|\\d+[- ]basis[- ]points?) (rate )?cut"
+      ],
+      "excludes": "(fewer|slower|delay\\w*|postpon\\w*|no|rules? out|pauses?|pausing|doubts? (on|about|over)|less likely) (\\w+ ){0,2}(rate )?cuts?"
+    },
+    {
+      "id": "monetary_topic",
+      "driver": "monetary",
+      "direction": 0,
+      "patterns": [
+        "fomc",
+        "federal reserve",
+        "(?-i:\\bFed\\b)",
+        "powell",
+        "\\bcpi\\b|\\bppi\\b",
+        "inflation (report|data|print|reading|figures)",
+        "interest rates?",
+        "(treasury|bond|real) yields?",
+        "rate decision"
+      ],
+      "excludes": "fed up"
+    },
+    {
+      "id": "monetary_scheduled",
+      "driver": "monetary",
+      "direction": 0,
+      "scheduled": true,
+      "patterns": [
+        "(fomc|fed|federal reserve) (meeting|decision|minutes|statement)",
+        "rate decision",
+        "(cpi|ppi|inflation) (report|data|print|reading|release)",
+        "jobs report|nonfarm payrolls|non-farm payrolls"
+      ]
+    },
+    {
+      "id": "macro_stress_rising",
+      "driver": "macro_risk",
+      "direction": 1,
+      "patterns": [
+        "bank (failure|run|collapse|crisis)s?",
+        "banks? (fail|fails|collapse|collapses)",
+        "(regional|community) banks? (under pressure|plunge|tumble|slump|sink|slide)s?",
+        "credit (crunch|crisis)",
+        "contagion",
+        "financial crisis",
+        "debt[- ]ceiling (standoff|fight|crisis|deadline|drama|showdown)",
+        "(government )?shutdown (looms|begins|starts|drags on|fears?|risk|threat)",
+        "(sovereign |u\\.?s\\.? )?default (risk|fears?)",
+        "recession (fears?|risk|warning|signal|alarm)s? ?(rise|grow|mount|flash)?",
+        "(downgrades?|cuts?) (the )?(u\\.?s\\.?|united states|us)('s)? (credit|debt) rating",
+        "systemic risk"
+      ],
+      "excludes": "(no|not|isn't|is not|without) (a |an |any )?(\\w+ )?(contagion|recession|crisis)"
+    },
+    {
+      "id": "macro_stress_easing",
+      "driver": "macro_risk",
+      "direction": -1,
+      "patterns": [
+        "shutdown (ends|averted|over|deal)",
+        "(ends?|averts?) (the )?(government )?shutdown",
+        "debt[- ]ceiling (deal|raised|suspended|agreement)",
+        "recession (fears?|risk|worries) (ease|fade|recede|cool)s?",
+        "soft landing",
+        "bank(ing)? (stress|fears?|crisis) (eases?|fades?|recedes?)"
+      ]
+    },
+    {
+      "id": "macro_topic",
+      "driver": "macro_risk",
+      "direction": 0,
+      "patterns": [
+        "recession",
+        "government shutdown",
+        "debt[- ]ceiling",
+        "banking (stress|turmoil)"
+      ]
+    },
+    {
+      "id": "supply_tightening",
+      "driver": "supply_flows",
+      "direction": 1,
+      "patterns": [
+        "opec\\+? (\\w+ ){0,2}(cuts?|cutting|extends? (\\w+ )?cuts?)",
+        "(output|production|supply) cuts?",
+        "(stockpiles?|inventor(y|ies)) (\\w+ )?(draw|draws|drawdown|fall|falls|drop|drops|decline|declines)",
+        "(crude|oil|gasoline|inventory) (draw|draws|drawdown)",
+        "supply (disruption|shortage|crunch|squeeze|deficit)s?",
+        "mine (outage|closure|strike|shutdown)s?",
+        "central banks? (\\w+ )?(buy|buys|buying|add|adds|adding|purchas\\w+) (\\w+ )?gold",
+        "gold (buying|purchases) by central banks?",
+        "(etf|fund) inflows?",
+        "(record|strong|heavy) inflows?"
+      ]
+    },
+    {
+      "id": "supply_loosening",
+      "driver": "supply_flows",
+      "direction": -1,
+      "patterns": [
+        "opec\\+? (\\w+ ){0,2}(hikes?|raises?|boosts?|increases?|lifts?) (\\w+ )?(output|production|supply)",
+        "(output|production|supply) (hike|increase|boost)s?",
+        "(stockpiles?|inventor(y|ies)) (\\w+ )?(build|builds|rise|rises|jump|jumps|surge|surges|swell|swells)",
+        "(crude|oil|gasoline|inventory) (build|builds)",
+        "supply (glut|surplus)",
+        "oversupply",
+        "(etf|fund) outflows?",
+        "(record|strong|heavy) outflows?"
+      ]
+    },
+    {
+      "id": "supply_topic",
+      "driver": "supply_flows",
+      "direction": 0,
+      "patterns": [
+        "\\bopec\\+?",
+        "\\beia\\b",
+        "(crude|oil) (inventor(y|ies)|stockpiles?)"
+      ]
+    },
+    {
+      "id": "supply_scheduled",
+      "driver": "supply_flows",
+      "direction": 0,
+      "scheduled": true,
+      "patterns": [
+        "opec\\+? (meeting|decision)",
+        "eia (\\w+ )?(report|inventor(y|ies)|data)"
+      ]
+    },
+    {
+      "id": "positioning_crowded_long",
+      "driver": "positioning",
+      "direction": 1,
+      "patterns": [
+        "record (net )?longs?",
+        "net longs? (hit|at|rise|surge|jump|climb)s?",
+        "crowded (long|trade)s?",
+        "extreme (greed|bullishness|optimism)",
+        "euphori(a|c)",
+        "overbought",
+        "most (bullish|crowded) (since|in)"
+      ]
+    },
+    {
+      "id": "positioning_crowded_short",
+      "driver": "positioning",
+      "direction": -1,
+      "patterns": [
+        "record (net )?shorts?",
+        "net shorts? (hit|at|rise|surge|jump|climb)s?",
+        "crowded shorts?",
+        "extreme (fear|bearishness|pessimism)",
+        "capitulation",
+        "oversold",
+        "short squeeze",
+        "most (bearish|shorted) (since|in)"
+      ]
+    },
+    {
+      "id": "positioning_topic",
+      "driver": "positioning",
+      "direction": 0,
+      "patterns": [
+        "\\bcot\\b",
+        "commitments? of traders",
+        "short interest",
+        "(investor|speculative|hedge fund) positioning"
+      ]
+    },
+    {
+      "id": "positioning_scheduled",
+      "driver": "positioning",
+      "direction": 0,
+      "scheduled": true,
+      "patterns": [
+        "cot report",
+        "commitments? of traders"
+      ]
+    },
+    {
+      "id": "dollar_up",
+      "driver": "dollar",
+      "direction": 1,
+      "patterns": [
+        "(?<![-\\w])dollar (index )?(rises|gains|climbs|jumps|surges|rallies|strengthens|firms|advances|rebounds|soars|higher|up)\\b",
+        "(stronger|strong|surging|rising|firmer) (u\\.?s\\.? )?dollar(?! (general|tree))",
+        "(dxy|greenback) (rises|gains|climbs|jumps|surges|rallies|strengthens|firms|advances|rebounds|higher|up)\\b"
+      ]
+    },
+    {
+      "id": "dollar_down",
+      "driver": "dollar",
+      "direction": -1,
+      "patterns": [
+        "(?<![-\\w])dollar (index )?(falls|slips|drops|slides|weakens|tumbles|sinks|eases|retreats|declines|lower|down)\\b",
+        "(weaker|weak|falling|sliding|softer) (u\\.?s\\.? )?dollar(?! (general|tree))",
+        "(dxy|greenback) (falls|slips|drops|slides|weakens|tumbles|sinks|eases|retreats|declines|lower|down)\\b",
+        "de-?dollari[sz]ation"
+      ]
+    },
+    {
+      "id": "dollar_topic",
+      "driver": "dollar",
+      "direction": 0,
+      "patterns": [
+        "u\\.?s\\.? dollar",
+        "dollar index",
+        "\\bdxy\\b",
+        "greenback",
+        "the dollar(?! (general|tree))"
+      ]
+    },
+    {
+      "id": "flush_under_way",
+      "driver": "liquidity_flush",
+      "direction": 1,
+      "patterns": [
+        "margin calls?",
+        "forced (selling|liquidations?)",
+        "liquidation cascade",
+        "dash for cash",
+        "sell everything",
+        "(everything|cross-asset|across[- ]the[- ]board) sell-?off",
+        "flash crash",
+        "circuit breakers? (triggered|tripped|hit)"
+      ]
+    }
+  ]
+}

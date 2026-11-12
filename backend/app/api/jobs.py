@@ -12,9 +12,12 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app import pipeline
 from app.config import get_settings
 from app.db import get_engine
+from app.hermes.client import build_cheap_client
 from app.ingest import recorder
+from app.ingest.base import new_http_client
 from app.ingest.registry import build_adapters
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -50,12 +53,23 @@ def _record_cot() -> dict:
     return recorder.record_cot(get_engine(), _adapters(), get_settings().data_dir)
 
 
+def _process_news() -> dict:
+    settings = get_settings()
+    return pipeline.process_news(
+        get_engine(),
+        settings,
+        _adapters(),
+        lambda: build_cheap_client(settings, new_http_client()),
+    )
+
+
 JOBS: dict[str, Callable[[], dict]] = {
     "selfcheck": _selfcheck,
     "check_sources": _check_sources,
     "record_news": _record_news,
     "record_bars": _record_bars,
     "record_cot": _record_cot,
+    "process_news": _process_news,
 }
 # One run of a job at a time: a second trigger while it is running is refused, not queued.
 _LOCKS: dict[str, threading.Lock] = {name: threading.Lock() for name in JOBS}

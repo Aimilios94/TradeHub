@@ -44,3 +44,26 @@ def migrated_engine(empty_db_url):
     engine = create_engine(empty_db_url)
     yield engine
     engine.dispose()
+
+
+@pytest.fixture
+def pipeline_engine(migrated_engine, seeds_dir, monkeypatch):
+    """Seeded database with no headlines, traces, scores or social samples."""
+    from app.ingest import recorder
+    from app.seeds import load_seeds
+
+    monkeypatch.setattr(recorder, "SOCIAL_PAUSE_SECONDS", 0)
+
+    load_seeds(migrated_engine, seeds_dir)
+    with migrated_engine.begin() as conn:
+        conn.execute(text("DELETE FROM daily_scores"))
+        conn.execute(text("DELETE FROM social_sentiment"))
+        conn.execute(text("DELETE FROM news_items"))
+        conn.execute(text("DELETE FROM llm_traces"))
+        conn.execute(
+            text(
+                "UPDATE sources SET enabled = true, last_success_at = NULL, "
+                "last_error_at = NULL, last_error = NULL"
+            )
+        )
+    return migrated_engine

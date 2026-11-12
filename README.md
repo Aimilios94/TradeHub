@@ -2,7 +2,7 @@
 
 A personal web app that collects free market news and data, ranks what matters each day, has an LLM ("Hermes") explain it in plain words, and tests the owner's strategies on past data. Every trade is made by hand elsewhere: there is no broker connection and no live money in this app.
 
-**Status:** Phase 0 (Foundations) and Phase 0.5 (source validation, recorder, first snapshot) built. News and price recording has started; nothing is scored or shown yet. The full plan is in [docs/PLAN.pdf](docs/PLAN.pdf).
+**Status:** Phases 0 and 0.5 are complete. Phase 1 (the equities news pipeline) is built and waiting on its acceptance run: recorded headlines are deduplicated, tagged, ranked, condensed by a local model and turned into a daily score per ticker. None of it has been evaluated yet and there is no UI for it yet. The full plan is in [docs/PLAN.pdf](docs/PLAN.pdf).
 
 ## Principles
 
@@ -18,7 +18,7 @@ A personal web app that collects free market news and data, ranks what matters e
 
 | Version | Scope | State |
 |---|---|---|
-| v1.0 (MVP) | Equities news pipeline, Dashboard, Market Pulse, Ticker Pages, daily-bar backtester with 6 starter strategies, Hermes evals | Phases 0 and 0.5 done |
+| v1.0 (MVP) | Equities news pipeline, Dashboard, Market Pulse, Ticker Pages, daily-bar backtester with 6 starter strategies, Hermes evals | Phases 0 and 0.5 done; Phase 1 built, acceptance open |
 | v1.0.5 | Paper sim, journal, morning briefing, Ask-Hermes | Planned |
 | v1.0.8 | Deep Analysis, strategy suggestions, regime filter | Planned |
 | v1.1 | Crypto | Planned |
@@ -78,6 +78,15 @@ docker compose exec api python -m scripts.snapshot freeze   # frozen copy in dat
 docker compose exec api python -m scripts.snapshot verify v2026-11-11
 ```
 
+News pipeline and labels:
+
+```sh
+docker compose exec n8n n8n import:workflow --input=/workflows/process_news.json   # then publish it
+curl "http://127.0.0.1:8100/api/news/top?limit=10"          # today's ranked headlines (UTC day)
+curl "http://127.0.0.1:8100/api/scores"                     # today's composite score per ticker
+docker compose exec api python -m scripts.label_set label   # label the 100-item eval set by hand
+```
+
 Tests and lint:
 
 ```sh
@@ -90,14 +99,14 @@ cd backend && uv run ruff check . ../db
 ```
 backend/app/      ingest, scoring, tagger, hermes, market, backtest, data, api
 backend/tests/    pytest suite
-backend/scripts/  CLI entry points (seeds, backfill, snapshot; evals later)
-backend/eval/     eval results and baselines (from Phase 1)
+backend/scripts/  CLI entry points (seeds, backfill, snapshot, golden day, labeling; evals later)
+backend/eval/     hand labels (IDs only), eval results and baselines
 frontend/         React + Vite
 strategies/       one JSON config per strategy (Phase 3)
 db/               Alembic migrations, config seeds, backup script
 n8n/              workflow exports (triggers only)
 data/             live recordings and frozen Parquet snapshots (git-ignored)
-sample-data/      golden day and small samples for CI (from Phase 1)
+sample-data/      golden day (synthetic headlines) and small samples for CI
 docs/             plan, data sources, backtesting method, monitoring, privacy
 ```
 

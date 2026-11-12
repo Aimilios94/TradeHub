@@ -12,11 +12,13 @@ What each section of TradeHub does. Seven sections; the MVP (v1.0) builds five, 
 | 6 | **Smart Money** | SEC Form 4 and 13F insider filings | v1.3 |
 | 7 | **Settings / Sources** | Source toggles, scrape depth, LLM budget, source health (last success, last error) | v1.0 |
 
-## What exists today (Phases 0 and 0.5)
+## What exists today (Phases 0, 0.5 and 1)
 
 - A status page that reads the API: service health (database, SearXNG, Ollama) and the source registry with each source's status, last success and last error.
 - A recorder, triggered by n8n: news headlines into PostgreSQL, daily and intraday bars and gold COT into Parquet. One frozen snapshot.
-- Nothing is ranked, scored, explained or backtested yet, and no Hermes text exists.
+- The news pipeline, triggered by n8n after each news run: duplicates folded together, driver tags, an importance score, a condenser line per headline from a local model (validated, or logged as a failure), and a composite sentiment score per ticker per day. It can be read through `/api/news/top` and `/api/scores`; there is no page for it yet.
+- The condenser, the tagger and both scores are unmeasured: the evals come in Phase 4, after the 100 hand labels exist. Treat their output as provisional.
+- Nothing is backtested yet, and no "why it matters" text exists.
 
 ## How the pieces fit
 

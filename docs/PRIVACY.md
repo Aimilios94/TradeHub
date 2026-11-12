@@ -7,7 +7,8 @@ TradeHub is a single-user app on the owner's own machine. It holds no personal d
 - `.env` and any file holding keys or secrets. `.env.example` holds names only.
 - `data/` — Parquet snapshots.
 - `backups/` — database dumps.
-- Real news text and labels from copyrighted sources. The repo commits label files with IDs and a small synthetic set only.
+- Real news text and labels from copyrighted sources. The repo commits label files with IDs and a small synthetic set only. The labeling working file, which holds real headlines, is `data/eval/labels.json`; the committed export holds item ids, URL hashes and labels.
+- StockTwits message text. Only bullish and bearish counts are stored.
 
 ## What leaves the machine
 

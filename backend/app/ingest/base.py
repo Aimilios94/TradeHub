@@ -96,6 +96,16 @@ class SearchResult:
     engines: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class SocialSample:
+    """Labeled-message counts for one ticker from one fetch. Message text is never kept."""
+
+    ticker_id: str
+    bullish: int
+    bearish: int
+    messages: int  # all messages in the sample, labeled or not
+
+
 class SourceAdapter(ABC):
     """Base class. `source_id` must match a row in the sources table."""
 
@@ -136,6 +146,13 @@ class PositioningSource(Protocol):
     source_id: ClassVar[str]
 
     def fetch_cot(self, ticker: TickerRef) -> pl.DataFrame: ...
+
+
+@runtime_checkable
+class SocialSource(Protocol):
+    source_id: ClassVar[str]
+
+    def fetch_sentiment(self, ticker: TickerRef) -> SocialSample | None: ...
 
 
 def new_http_client(**kwargs) -> httpx.Client:

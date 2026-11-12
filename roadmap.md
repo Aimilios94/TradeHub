@@ -29,14 +29,16 @@ Six MVP phases over about 16 part-time weeks, then five later versions. A phase 
 
 ### Phase 1 — Equities pipeline (weeks 4–6)
 
-- [ ] Ingest adapters: Yahoo RSS, Finnhub news, StockTwits, SearXNG
-- [ ] Dedupe, importance score, driver tagger v1
-- [ ] Hermes condenser with Pydantic validation, one retry, `llm_traces`
-- [ ] Composite sentiment score per ticker per day
-- [ ] Start labeling 100 news items
-- [ ] Golden day recorded and committed
+- [x] Ingest adapters: Yahoo RSS, Finnhub news, StockTwits, SearXNG
+- [x] Dedupe, importance score, driver tagger v1
+- [x] Hermes condenser with Pydantic validation, one retry, `llm_traces` (on local Ollama until the Phase 4 model eval)
+- [x] Composite sentiment score per ticker per day
+- [ ] Start labeling 100 news items (set drawn and labeling tool built 2026-11-12; the labels are the owner's to make)
+- [x] Golden day committed (synthetic headlines; real news text is never committed)
 
-**Accept:** 3 consecutive days of hands-off ingest; zero fabricated rows; 100% of Hermes rows valid or logged as failures; golden-day test green.
+**Accept:** 3 consecutive days of hands-off ingest; zero fabricated rows; dedupe rate sane; 100% of Hermes rows valid or logged as failures; golden-day test green.
+
+Acceptance state on 2026-11-12: golden-day test green; the 3 hands-off days start once the `process news` workflow is published in n8n.
 
 ### Phase 2 — Context layer + UI (weeks 7–9)
 

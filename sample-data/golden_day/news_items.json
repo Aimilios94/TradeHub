@@ -1,0 +1,199 @@
+{
+  "note": "Synthetic headlines in the shape the recorder stores. Invented for testing; none of this is real news. Items are stored in this order, all ingested at 'ingested_at'.",
+  "day": "2026-11-10",
+  "ingested_at": "2026-11-10T21:30:00+00:00",
+  "items": [
+    {
+      "source_id": "finnhub",
+      "title": "Utilities sector little changed in quiet session",
+      "url": "https://example.com/golden/00",
+      "published_at": "2026-11-06T15:00:00+00:00",
+      "excerpt": "Synthetic. Same wording as a later item, but four days earlier: outside the duplicate window.",
+      "source_tickers": ["ETF:XLU"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Tesla beats third-quarter earnings estimates as deliveries rise",
+      "url": "https://example.com/golden/01",
+      "published_at": "2026-11-10T12:05:00+00:00",
+      "excerpt": "Synthetic. The company reported quarterly results above expectations.",
+      "source_tickers": ["EQ:TSLA"]
+    },
+    {
+      "source_id": "yahoo_rss",
+      "title": "Tesla beats third-quarter earnings estimates as deliveries rise",
+      "url": "https://example.com/golden/02",
+      "published_at": "2026-11-10T12:20:00+00:00",
+      "excerpt": "Synthetic. A second feed carrying the same story under another link.",
+      "source_tickers": ["EQ:TSLA"]
+    },
+    {
+      "source_id": "massive",
+      "title": "Tesla beats third-quarter earnings estimates as deliveries rise - Update",
+      "url": "https://example.com/golden/03",
+      "published_at": "2026-11-10T13:10:00+00:00",
+      "excerpt": "Synthetic. A third copy with a word added to the title.",
+      "source_tickers": ["EQ:TSLA", "ETF:XLY"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Nvidia raises full-year revenue outlook on data center demand",
+      "url": "https://example.com/golden/04",
+      "published_at": "2026-11-10T11:40:00+00:00",
+      "excerpt": "Synthetic. The company lifted its outlook for the year.",
+      "source_tickers": ["EQ:NVDA"]
+    },
+    {
+      "source_id": "yahoo_rss",
+      "title": "Nvidia raises full-year revenue outlook on data center demand",
+      "url": "https://example.com/golden/05",
+      "published_at": "2026-11-10T11:55:00+00:00",
+      "excerpt": "Synthetic. The same story from a second feed, attached to two tickers.",
+      "source_tickers": ["EQ:NVDA", "ETF:XLK"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Fed signals slower rate cuts as inflation rises",
+      "url": "https://example.com/golden/06",
+      "published_at": "2026-11-10T18:00:00+00:00",
+      "excerpt": "Synthetic. Officials pointed to a slower pace of easing.",
+      "source_tickers": ["ETF:SPY", "ETF:QQQ"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Stock futures steady ahead of CPI report and Fed meeting",
+      "url": "https://example.com/golden/07",
+      "published_at": "2026-11-10T09:30:00+00:00",
+      "excerpt": "Synthetic. Markets waited for scheduled data.",
+      "source_tickers": ["ETF:SPY"]
+    },
+    {
+      "source_id": "massive",
+      "title": "3 Stocks to Buy and Hold Forever",
+      "url": "https://example.com/golden/08",
+      "published_at": "2026-11-10T10:00:00+00:00",
+      "excerpt": "Synthetic. An opinion list with no new fact.",
+      "source_tickers": ["EQ:NVDA", "EQ:TSLA"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Tesla stock: should you buy it or sell it now?",
+      "url": "https://example.com/golden/09",
+      "published_at": "2026-11-10T14:00:00+00:00",
+      "excerpt": "Synthetic. A templated article about one company.",
+      "source_tickers": ["EQ:TSLA"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Nvidia stock: should you buy it or sell it now?",
+      "url": "https://example.com/golden/10",
+      "published_at": "2026-11-10T14:05:00+00:00",
+      "excerpt": "Synthetic. The same template about another company: not a duplicate.",
+      "source_tickers": ["EQ:NVDA"]
+    },
+    {
+      "source_id": "yahoo_rss",
+      "title": "Gold climbs as dollar slips and central banks keep buying gold",
+      "url": "https://example.com/golden/11",
+      "published_at": "2026-11-10T16:10:00+00:00",
+      "excerpt": "Synthetic. A weaker dollar and official purchases supported the metal.",
+      "source_tickers": ["ETF:GLD"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Oil jumps after new sanctions on major exporter",
+      "url": "https://example.com/golden/12",
+      "published_at": "2026-11-10T15:20:00+00:00",
+      "excerpt": "Synthetic. Energy prices rose on the announcement.",
+      "source_tickers": ["ETF:XLE"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Regional banks slide as recession fears grow",
+      "url": "https://example.com/golden/13",
+      "published_at": "2026-11-10T17:00:00+00:00",
+      "excerpt": "Synthetic. Financial shares fell.",
+      "source_tickers": ["ETF:XLF"]
+    },
+    {
+      "source_id": "yahoo_rss",
+      "title": "Regulators open probe into Tesla driver-assistance software",
+      "url": "https://example.com/golden/14",
+      "published_at": "2026-11-10T19:15:00+00:00",
+      "excerpt": "Synthetic. An agency said it had opened an inquiry.",
+      "source_tickers": ["EQ:TSLA"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Nvidia names new chief financial officer",
+      "url": "https://example.com/golden/15",
+      "published_at": "2026-11-10T20:00:00+00:00",
+      "excerpt": "Synthetic. The company announced a management change.",
+      "source_tickers": ["EQ:NVDA"]
+    },
+    {
+      "source_id": "massive",
+      "title": "Analyst upgrades Tesla and lifts price target",
+      "url": "https://example.com/golden/16",
+      "published_at": "2026-11-10T13:30:00+00:00",
+      "excerpt": "Synthetic. A broker changed its rating.",
+      "source_tickers": ["EQ:TSLA"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Energy shares lag as crude inventories rise",
+      "url": "https://example.com/golden/17",
+      "published_at": "2026-11-10T16:45:00+00:00",
+      "excerpt": "Synthetic. Stockpiles increased in the weekly data.",
+      "source_tickers": ["ETF:XLE"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Tech ETF sees record inflows",
+      "url": "https://example.com/golden/18",
+      "published_at": "2026-11-10T12:45:00+00:00",
+      "excerpt": "Synthetic. Fund flow data showed strong demand.",
+      "source_tickers": ["ETF:XLK"]
+    },
+    {
+      "source_id": "yahoo_rss",
+      "title": "Traders brace for margin calls after cross-asset sell-off",
+      "url": "https://example.com/golden/19",
+      "published_at": "2026-11-10T20:30:00+00:00",
+      "excerpt": "Synthetic. Several asset classes fell together.",
+      "source_tickers": ["ETF:SPY", "ETF:QQQ", "ETF:GLD"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Utilities sector little changed in quiet session",
+      "url": "https://example.com/golden/20",
+      "published_at": "2026-11-10T20:45:00+00:00",
+      "excerpt": "Synthetic. Nothing notable.",
+      "source_tickers": ["ETF:XLU"]
+    },
+    {
+      "source_id": "massive",
+      "title": "Fed signals slower rate cuts as inflation rises",
+      "url": "https://example.com/golden/21",
+      "published_at": "2026-11-10T18:10:00+00:00",
+      "excerpt": "Synthetic. A second copy of the monetary story.",
+      "source_tickers": ["ETF:SPY"]
+    },
+    {
+      "source_id": "yahoo_rss",
+      "title": "Fed signals slower rate cuts as inflation rises",
+      "url": "https://example.com/golden/22",
+      "published_at": "2026-11-10T18:25:00+00:00",
+      "excerpt": "Synthetic. A third copy of the monetary story.",
+      "source_tickers": ["ETF:QQQ"]
+    },
+    {
+      "source_id": "finnhub",
+      "title": "Health care stocks edge higher",
+      "url": "https://example.com/golden/23",
+      "published_at": "2026-11-10T19:00:00+00:00",
+      "excerpt": "Synthetic. A short sector note.",
+      "source_tickers": ["ETF:XLV"]
+    }
+  ]
+}

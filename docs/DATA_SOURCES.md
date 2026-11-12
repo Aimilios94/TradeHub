@@ -59,6 +59,7 @@ If every source for a need fails, the UI shows the last value with a stale label
 | Daily bars, full history | Yahoo, every seeded ticker with a Yahoo symbol (27) | `data/live/bars_daily/` | 22:30 daily |
 | Intraday bars: 1m, 5m, 1h, regular session | Yahoo, watchlist tickers (16) | `data/live/bars_intraday/` | 22:30 daily |
 | COT, legacy futures-only | CFTC, tickers with a `cftc` market code (gold) | `data/live/cot/` | Friday 22:00 |
+| Bullish and bearish message counts | StockTwits, watchlist tickers | PostgreSQL `social_sentiment` | Once a day, by the pipeline job (07:15, 13:15, 21:45) |
 
 Yahoo serves 1-minute bars for the last 7 days only, 5-minute for 60 days and hourly for 730 days. Each run asks for the last 7 days, so a few missed days fill in on the next run; after a longer gap it asks for the longest window allowed. Bars still forming when a run happens are not stored.
 
@@ -107,8 +108,9 @@ Yahoo serves 1-minute bars for the last 7 days only, 5-minute for 60 days and ho
 
 ### StockTwits
 - Unofficial public endpoint `https://api.stocktwits.com/api/2/streams/symbol/{TICKER}.json`. No key, no account.
-- Use: one cached fetch per watchlist ticker per day; count Bullish and Bearish among labeled messages.
-- Each call returns only recent messages, so the sample is small. Below a minimum number of labeled messages, or when the endpoint fails, that ticker's score is news-only.
+- Use: one fetch per watchlist ticker per UTC day; count Bullish and Bearish among labeled messages. Only the counts are stored (`social_sentiment`), never message text.
+- Each call returns about 30 recent messages, of which roughly a third carry a label (TSLA on 2026-11-12: 10 of 30). Below 10 labeled messages, or when the endpoint fails, that ticker's score is news-only.
+- Seen on 2026-11-12: the endpoint sometimes answers HTTP 403 with an HTML page, then 200 on the next call. The adapter reports the 403 as an error and does not retry or work around it; the day's later pipeline runs try the missing tickers again.
 
 ### Yahoo
 - Unofficial endpoints, through the `yfinance` library; they can change without notice. Contract tests catch shape changes.

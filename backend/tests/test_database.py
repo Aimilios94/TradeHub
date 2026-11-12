@@ -25,6 +25,7 @@ V1_TABLES = {
     "backtests",
     "llm_traces",
     "eval_runs",
+    "social_sentiment",  # added in 0004
 }
 
 

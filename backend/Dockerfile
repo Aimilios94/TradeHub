@@ -16,6 +16,8 @@ RUN uv sync --frozen
 
 COPY backend/ /srv/backend/
 COPY db/ /srv/db/
+# The golden day and other committed samples, read by the tests.
+COPY sample-data/ /srv/sample-data/
 
 EXPOSE 8000
 # Migrate, load config seeds, then serve. Any failure stops the container with the real error.

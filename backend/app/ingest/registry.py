@@ -1,7 +1,7 @@
 """Builds the adapters. The key is the source's id in the sources table.
 
-Sources verified earlier without an adapter yet (FMP, Tiingo, Twelve Data, FRED, BLS,
-StockTwits) get theirs in the phase that first uses them.
+Sources verified earlier without an adapter yet (FMP, Tiingo, Twelve Data, FRED, BLS) get
+theirs in the phase that first uses them.
 """
 
 import httpx
@@ -12,6 +12,7 @@ from app.ingest.cftc import CftcCotAdapter
 from app.ingest.finnhub import FinnhubAdapter
 from app.ingest.massive import MassiveAdapter
 from app.ingest.searxng import SearxngAdapter
+from app.ingest.stocktwits import StockTwitsAdapter
 from app.ingest.yahoo import YahooFinanceAdapter
 from app.ingest.yahoo_rss import YahooRssAdapter
 
@@ -27,5 +28,6 @@ def build_adapters(
         MassiveAdapter(client, settings.massive_api_key),
         SearxngAdapter(client, settings.searxng_base_url),
         CftcCotAdapter(client),
+        StockTwitsAdapter(client),
     ]
     return {adapter.source_id: adapter for adapter in adapters}

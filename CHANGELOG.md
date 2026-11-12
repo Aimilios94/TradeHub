@@ -4,6 +4,23 @@ One entry per version. Phases of the MVP are listed under "Unreleased" until v1.
 
 ## Unreleased (towards v1.0)
 
+### Phase 1 — Equities pipeline (built 2026-11-12; acceptance still open)
+
+- Dedupe across feeds: same or contained title within 72 hours writes `duplicate_of`. 17.7% of the first 1,563 recorded headlines were duplicates.
+- Driver tagger v1: keyword rules for the 7 tags in `backend/app/tagger/rules.json`, with direction and the scheduled flag, written to `tagged_events`.
+- Importance score v1 (0–100) with its components stored per headline; ranking of a day.
+- Hermes condenser (template 1): versioned prompt file, Pydantic schema, menu checks, number check, one retry with the reason, every call in `llm_traces`, daily and per-run caps, monthly budget stop. Runs on local Ollama until the Phase 4 model eval.
+- Number check (`backend/app/hermes/number_check.py`) with the plan's rounding rule.
+- StockTwits adapter and one sample per ticker per day (counts only).
+- Composite sentiment score per ticker per day in `daily_scores`.
+- Job `process_news` and n8n workflow `process_news.json` (07:15, 13:15, 21:45 UTC).
+- Read-only API: `/api/news/top` and `/api/scores`.
+- Golden day: 24 synthetic headlines and `expected.json` in `sample-data/golden_day/`, with a test.
+- Labeling tool `scripts/label_set.py`: draws the 100-item set, labels in the terminal, exports IDs and labels only.
+- Migration `0004`: `news_items.processed_at` and `importance_components`, `llm_traces.news_item_id`, tagger columns on `tagged_events`, table `social_sentiment`.
+- Tests: 205.
+- Not done yet: the 100 labels (owner), and the acceptance run of 3 hands-off days.
+
 ### Phase 0.5 — Source validation and recording (2026-11-11)
 
 - Verified with real calls: Yahoo Finance (daily, strip symbols, intraday), Yahoo RSS, SearXNG, CFTC COT. Every v1.0 source is now working or dropped: 12 working, and Stooq dropped (key pending). The source seed holds 13 rows.

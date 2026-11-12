@@ -1,0 +1,169 @@
+{
+  "duplicates": {
+    "https://example.com/golden/02": "https://example.com/golden/01",
+    "https://example.com/golden/03": "https://example.com/golden/01",
+    "https://example.com/golden/05": "https://example.com/golden/04",
+    "https://example.com/golden/21": "https://example.com/golden/06",
+    "https://example.com/golden/22": "https://example.com/golden/06"
+  },
+  "tags": {
+    "https://example.com/golden/06": [
+      [
+        "monetary",
+        1,
+        false
+      ]
+    ],
+    "https://example.com/golden/07": [
+      [
+        "monetary",
+        0,
+        true
+      ]
+    ],
+    "https://example.com/golden/11": [
+      [
+        "dollar",
+        -1,
+        false
+      ],
+      [
+        "supply_flows",
+        1,
+        false
+      ]
+    ],
+    "https://example.com/golden/12": [
+      [
+        "geopolitical",
+        1,
+        false
+      ]
+    ],
+    "https://example.com/golden/13": [
+      [
+        "macro_risk",
+        1,
+        false
+      ]
+    ],
+    "https://example.com/golden/17": [
+      [
+        "supply_flows",
+        -1,
+        false
+      ]
+    ],
+    "https://example.com/golden/18": [
+      [
+        "supply_flows",
+        1,
+        false
+      ]
+    ],
+    "https://example.com/golden/19": [
+      [
+        "liquidity_flush",
+        1,
+        false
+      ]
+    ]
+  },
+  "ranking": [
+    {
+      "url": "https://example.com/golden/01",
+      "score": 71.67,
+      "title": "Tesla beats third-quarter earnings estimates as deliveries rise"
+    },
+    {
+      "url": "https://example.com/golden/04",
+      "score": 63.33,
+      "title": "Nvidia raises full-year revenue outlook on data center demand"
+    },
+    {
+      "url": "https://example.com/golden/06",
+      "score": 57.67,
+      "title": "Fed signals slower rate cuts as inflation rises"
+    },
+    {
+      "url": "https://example.com/golden/16",
+      "score": 50.0,
+      "title": "Analyst upgrades Tesla and lifts price target"
+    },
+    {
+      "url": "https://example.com/golden/14",
+      "score": 44.0,
+      "title": "Regulators open probe into Tesla driver-assistance software"
+    },
+    {
+      "url": "https://example.com/golden/15",
+      "score": 41.0,
+      "title": "Nvidia names new chief financial officer"
+    },
+    {
+      "url": "https://example.com/golden/13",
+      "score": 36.0,
+      "title": "Regional banks slide as recession fears grow"
+    },
+    {
+      "url": "https://example.com/golden/07",
+      "score": 28.5,
+      "title": "Stock futures steady ahead of CPI report and Fed meeting"
+    },
+    {
+      "url": "https://example.com/golden/19",
+      "score": 25.0,
+      "title": "Traders brace for margin calls after cross-asset sell-off"
+    },
+    {
+      "url": "https://example.com/golden/17",
+      "score": 15.0,
+      "title": "Energy shares lag as crude inventories rise"
+    },
+    {
+      "url": "https://example.com/golden/11",
+      "score": 15.0,
+      "title": "Gold climbs as dollar slips and central banks keep buying gold"
+    },
+    {
+      "url": "https://example.com/golden/12",
+      "score": 15.0,
+      "title": "Oil jumps after new sanctions on major exporter"
+    },
+    {
+      "url": "https://example.com/golden/18",
+      "score": 15.0,
+      "title": "Tech ETF sees record inflows"
+    },
+    {
+      "url": "https://example.com/golden/20",
+      "score": 0.0,
+      "title": "Utilities sector little changed in quiet session"
+    },
+    {
+      "url": "https://example.com/golden/23",
+      "score": 0.0,
+      "title": "Health care stocks edge higher"
+    },
+    {
+      "url": "https://example.com/golden/10",
+      "score": 0.0,
+      "title": "Nvidia stock: should you buy it or sell it now?"
+    },
+    {
+      "url": "https://example.com/golden/09",
+      "score": 0.0,
+      "title": "Tesla stock: should you buy it or sell it now?"
+    },
+    {
+      "url": "https://example.com/golden/08",
+      "score": 0.0,
+      "title": "3 Stocks to Buy and Hold Forever"
+    },
+    {
+      "url": "https://example.com/golden/00",
+      "score": 0.0,
+      "title": "Utilities sector little changed in quiet session"
+    }
+  ]
+}

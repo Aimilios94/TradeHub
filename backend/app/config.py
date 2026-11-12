@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     openrouter_model_cheap: str = ""
     ollama_model: str = ""
     llm_monthly_budget_eur: float = 5.0
+    # Condenser limits: calls per UTC day, calls per pipeline run, days it looks back.
+    condenser_daily_cap: int = 300
+    condenser_run_cap: int = 100
+    condenser_lookback_days: int = 3
 
     seeds_dir: Path = REPO_ROOT / "db" / "seeds"
     # Parquet recordings and frozen snapshots. Git-ignored; mounted from the host in Compose.

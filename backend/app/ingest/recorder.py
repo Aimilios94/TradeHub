@@ -24,6 +24,7 @@ from app.ingest.base import (
     NewsHeadline,
     NewsSource,
     PositioningSource,
+    SocialSource,
     SourceAdapter,
     TickerRef,
 )
@@ -38,6 +39,7 @@ EXCERPT_LENGTH = 500
 # After the first fetch only the recent days are requested; a longer gap triggers a full refetch.
 INTRADAY_REFRESH_DAYS = 7
 PAUSE_SECONDS = 0.25  # between calls to the same provider
+SOCIAL_PAUSE_SECONDS = 1.0  # StockTwits is an unofficial endpoint: stay slow
 
 _TRACKING_PARAMS = {".tsrc", "tsrc", "guccounter", "guce_referrer", "guce_referrer_sig", "fbclid"}
 
@@ -63,6 +65,18 @@ _INSERT_NEWS = text(
     RETURNING (xmax = 0) AS inserted
     """
 ).bindparams(bindparam("source_tickers", type_=ARRAY(Text)), bindparam("source_meta", type_=JSONB))
+
+
+_SOCIAL_DONE = text(
+    "SELECT ticker_id FROM social_sentiment WHERE day = :day AND source_id = :source_id"
+)
+_INSERT_SOCIAL = text(
+    """
+    INSERT INTO social_sentiment (ticker_id, day, source_id, bullish, bearish, messages, fetched_at)
+    VALUES (:ticker_id, :day, :source_id, :bullish, :bearish, :messages, :fetched_at)
+    ON CONFLICT (ticker_id, day, source_id) DO NOTHING
+    """
+)
 
 
 def load_tickers(engine: Engine, watchlist_only: bool = False) -> list[TickerRef]:
@@ -279,4 +293,54 @@ def record_cot(engine: Engine, adapters: dict[str, SourceAdapter], data_dir: Pat
             outcome.calls_ok += 1
         except Exception as exc:
             outcome.failed(exc)
+    return _result({source_id: outcome.finish()}, skipped)
+
+
+def record_social(
+    engine: Engine, adapters: dict[str, SourceAdapter], pause: float | None = None
+) -> dict:
+    """One StockTwits sample per watchlist ticker per UTC day: bullish and bearish counts.
+
+    A ticker that already has today's sample is not fetched again. A failed fetch stores
+    nothing, so that ticker's score stays news-only.
+    """
+    source_id = "stocktwits"
+    active, skipped = _split_enabled(engine, (source_id,))
+    if not active:
+        return _result({}, skipped)
+    adapter = adapters[source_id]
+    assert isinstance(adapter, SocialSource)
+    outcome = _Outcome(engine, source_id)
+    pause = SOCIAL_PAUSE_SECONDS if pause is None else pause
+    now = datetime.now(UTC)
+    with engine.connect() as conn:
+        done = set(
+            conn.execute(_SOCIAL_DONE, {"day": now.date(), "source_id": source_id}).scalars()
+        )
+    for ticker in load_tickers(engine, watchlist_only=True):
+        if ticker.id in done:
+            outcome.add("already_sampled", 1)
+            continue
+        try:
+            sample = adapter.fetch_sentiment(ticker)
+            if sample is not None:
+                with engine.begin() as conn:
+                    conn.execute(
+                        _INSERT_SOCIAL,
+                        {
+                            "ticker_id": sample.ticker_id,
+                            "day": now.date(),
+                            "source_id": source_id,
+                            "bullish": sample.bullish,
+                            "bearish": sample.bearish,
+                            "messages": sample.messages,
+                            "fetched_at": now,
+                        },
+                    )
+                outcome.add("samples_stored", 1)
+                outcome.add("labeled_messages", sample.bullish + sample.bearish)
+                outcome.calls_ok += 1
+        except Exception as exc:
+            outcome.failed(exc)
+        time.sleep(pause)
     return _result({source_id: outcome.finish()}, skipped)
