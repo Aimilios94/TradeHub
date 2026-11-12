@@ -12,13 +12,13 @@ One entry per version. Phases of the MVP are listed under "Unreleased" until v1.
 - Hermes condenser (template 1): versioned prompt file, Pydantic schema, menu checks, number check, one retry with the reason, every call in `llm_traces`, daily and per-run caps, monthly budget stop. Runs on local Ollama until the Phase 4 model eval.
 - Number check (`backend/app/hermes/number_check.py`) with the plan's rounding rule.
 - StockTwits adapter and one sample per ticker per day (counts only).
-- Composite sentiment score per ticker per day in `daily_scores`.
+- Composite sentiment score per ticker per day in `daily_scores`. Now `composite-v2` (D56): the driver input is scaled by the number of driver tags, so one tag no longer gives a ticker without headlines the full -100 or +100.
 - Job `process_news` and n8n workflow `process_news.json` (07:15, 13:15, 21:45 UTC).
 - Read-only API: `/api/news/top` and `/api/scores`.
 - Golden day: 24 synthetic headlines and `expected.json` in `sample-data/golden_day/`, with a test.
 - Labeling tool `scripts/label_set.py`: draws the 100-item set, labels in the terminal, exports IDs and labels only.
 - Migration `0004`: `news_items.processed_at` and `importance_components`, `llm_traces.news_item_id`, tagger columns on `tagged_events`, table `social_sentiment`.
-- Tests: 205.
+- Tests: 206.
 - Not done yet: the 100 labels (owner), and the acceptance run of 3 hands-off days.
 
 ### Phase 0.5 — Source validation and recording (2026-11-11)

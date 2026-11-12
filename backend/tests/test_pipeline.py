@@ -324,9 +324,13 @@ def test_daily_scores_come_from_sentiment_tags_and_social(pipeline_engine):
     assert scores["EQ:TSLA"]["news_count"] == 1
     assert scores["EQ:TSLA"]["components"]["social"] == 0.5
     # A hawkish tag reaches SPY, QQQ and GLD through the sensitivity matrix: expected -1 each.
+    # One tagged headline is a fifth of full weight: -20, not -100.
     for ticker in ("ETF:SPY", "ETF:QQQ", "ETF:GLD"):
-        assert float(scores[ticker]["composite_score"]) == -100.0
+        assert float(scores[ticker]["composite_score"]) == -20.0
         assert scores[ticker]["components"]["news"] is None
+        assert scores[ticker]["components"]["driver"] == -0.2
+        assert scores[ticker]["components"]["driver_events"] == 1
+        assert scores[ticker]["code_version"] == "composite-v2"
     assert "EQ:NVDA" not in scores  # too few labeled messages and nothing else: no row
     assert (
         composite.score_day(pipeline_engine, DAY - timedelta(days=5), condenser.PROMPT_VERSION, NOW)

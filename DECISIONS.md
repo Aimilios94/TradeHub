@@ -62,7 +62,7 @@ Every locked or rejected decision with its reason. Settled items are not re-open
 
 ## Decided during Phase 1 (2026-11-12)
 
-D46, D47 and D54 hold starting values chosen by the agent. They are hypotheses for the owner to review, not measured results.
+D46, D47 (with D56) and D54 hold starting values chosen by the agent. They are hypotheses for the owner to review, not measured results.
 
 | # | Decision | Reason |
 |---|---|---|
@@ -78,6 +78,7 @@ D46, D47 and D54 hold starting values chosen by the agent. They are hypotheses f
 | D53 | The golden day is 24 synthetic headlines in the recorder's shape (`sample-data/golden_day/`). The test stores them through the recorder's code, runs the real pipeline and compares duplicates, tags and ranking with `expected.json`. Rows are marked `is_demo` | Real news text is never committed. `expected.json` changes only on purpose, after reviewing the difference |
 | D54 | The label set is 100 shown headlines: 60 drawn at random and 40 from headlines containing a macro word, with a fixed seed. Each item records its stratum, and evals report per stratum. Labels are the owner's; no model output is shown while labeling. The working file is `data/eval/labels.json` (git-ignored); only IDs, URL hashes and labels are exported to the repo | Company news almost never carries a driver tag, so a purely random 100 could not measure the tagger. The macro part is not representative of the news flow and must not be mixed into one accuracy figure |
 | D55 | The monthly LLM budget (euros) is compared with the reported cost in US dollars as if they were equal | A dollar is worth less than a euro, so the cap triggers slightly early, never late, and no exchange rate has to be fetched |
+| D56 | Composite score v2 (`composite-v2`) replaces v1: the driver input is scaled by the number of directed driver tags that reach the ticker that day, with full weight at 5, the same rule as news volume. Everything else in D47 is unchanged. The two days stored under v1 (2026-11-11 and 2026-11-12) were recomputed, so every stored row is v2 | Owner's decision, 2026-11-12. In v1 a ticker with no headlines got the full ±100 from one tag (`ETF:XLE` on 2026-11-12: -100 from 1 tag; -20 under v2). Still a hypothesis, checked against returns once 60 days exist |
 
 ## Rejected
 

@@ -263,13 +263,31 @@ def test_news_only_score_scales_with_volume():
 
 
 def test_news_and_driver_are_weighted_60_40():
-    result = composite.composite_score(news_mean=1.0, news_items=5, driver_mean=-1.0)
+    result = composite.composite_score(
+        news_mean=1.0, news_items=5, driver_mean=-1.0, driver_events=5
+    )
     assert result.score == 20.0
     assert result.components["driver"] == -1.0
 
 
-def test_driver_only_score():
-    assert composite.composite_score(news_mean=None, news_items=0, driver_mean=-0.5).score == -50.0
+def test_driver_only_score_scales_with_tagged_headlines():
+    def score(events):
+        return composite.composite_score(
+            news_mean=None, news_items=0, driver_mean=-1.0, driver_events=events
+        )
+
+    assert [score(n).score for n in (1, 2, 5, 40)] == [-20.0, -40.0, -100.0, -100.0]
+    assert score(1).components["driver"] == -0.2
+    assert score(1).components["driver_mean"] == -1.0
+    assert score(1).components["version"] == "composite-v2"
+    assert score(0) is None  # a mean without a tagged headline is no input
+
+
+def test_one_tag_moves_a_ticker_with_news_only_a_little():
+    result = composite.composite_score(
+        news_mean=0.5, news_items=5, driver_mean=-1.0, driver_events=1
+    )
+    assert result.score == 22.0  # 100 * (0.6 * 0.5 + 0.4 * -0.2)
 
 
 def test_social_is_additive_and_ignored_below_the_minimum():
@@ -284,6 +302,10 @@ def test_social_is_additive_and_ignored_below_the_minimum():
 
 
 def test_score_is_limited_to_plus_and_minus_100():
-    top = composite.composite_score(news_mean=1.0, news_items=9, driver_mean=1.0, bullish=30)
-    bottom = composite.composite_score(news_mean=-1.0, news_items=9, driver_mean=-1.0, bearish=30)
+    top = composite.composite_score(
+        news_mean=1.0, news_items=9, driver_mean=1.0, driver_events=9, bullish=30
+    )
+    bottom = composite.composite_score(
+        news_mean=-1.0, news_items=9, driver_mean=-1.0, driver_events=9, bearish=30
+    )
     assert (top.score, bottom.score) == (100.0, -100.0)
