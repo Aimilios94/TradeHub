@@ -5,7 +5,7 @@ What is watched and where to look. Items marked "planned" are designed but not b
 ## Service health (built)
 
 - `GET /health` — API and database. Returns 503 with the real error when the database is unreachable.
-- `GET /health/deps` — database, SearXNG and Ollama, each with its own state and error.
+- `GET /health/deps` — database, SearXNG and Ollama, each with its own state and error. Ollama is only the condenser's local fallback since D57, so its check failing does not stop the pipeline; OpenRouter is not checked here, its failures appear in `llm_traces` with outcome `error`.
 - `docker compose ps` — container state. The `api` container has a health check.
 
 ## Source health (built)

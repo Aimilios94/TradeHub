@@ -47,7 +47,7 @@ Nothing has been measured yet. This section will hold condenser accuracy, tagger
 
 ## How to run
 
-Requirements: Docker, and Ollama running on the host. For development: [uv](https://docs.astral.sh/uv/) and Node 24.
+Requirements: Docker, and an OpenRouter key in `.env`: the condenser sends headlines and short excerpts to OpenRouter (see `docs/PRIVACY.md`). Ollama on the host is optional: it is the local fallback when `OPENROUTER_MODEL_CHEAP` is empty, and nothing leaves the machine then. For development: [uv](https://docs.astral.sh/uv/) and Node 24.
 
 ```sh
 cp .env.example .env        # then fill in the keys and generate the three secrets
@@ -56,7 +56,7 @@ docker compose up -d --build
 
 | Service | Address | Notes |
 |---|---|---|
-| API | http://127.0.0.1:8100/health | `/health/deps` shows database, SearXNG and Ollama |
+| API | http://127.0.0.1:8100/health | `/health/deps` shows database, SearXNG and Ollama (Ollama may be down when the condenser uses OpenRouter) |
 | n8n | http://127.0.0.1:5680 | Triggers only |
 | SearXNG | http://127.0.0.1:8888 | JSON output enabled |
 | PostgreSQL | not published | Reachable only inside the Compose network |
