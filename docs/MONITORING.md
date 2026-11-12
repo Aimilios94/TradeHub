@@ -54,7 +54,7 @@ FROM llm_traces WHERE template = 'condenser' GROUP BY 1 ORDER BY 1;
 
 ## Budget and caps (built, alert planned)
 
-- `CONDENSER_DAILY_CAP` (300) calls per UTC day and `CONDENSER_RUN_CAP` (100) per run. When a cap stops a run with headlines left, one row with outcome `capped` records how many.
+- `CONDENSER_DAILY_CAP` (1,000) calls per UTC day and `CONDENSER_RUN_CAP` (400) per run (D58). When a cap stops a run with headlines left, one row with outcome `capped` records how many.
 - Monthly budget: `LLM_MONTHLY_BUDGET_EUR` (5 by default). When the month's cost reaches it, the condenser stops and logs `capped`. The Telegram alert is planned.
 - The OpenRouter key also has its own hard limit set on the OpenRouter side.
 

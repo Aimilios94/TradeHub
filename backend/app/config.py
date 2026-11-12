@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     ollama_model: str = ""
     llm_monthly_budget_eur: float = 5.0
     # Condenser limits: calls per UTC day, calls per pipeline run, days it looks back.
-    condenser_daily_cap: int = 300
-    condenser_run_cap: int = 100
+    condenser_daily_cap: int = 1000
+    condenser_run_cap: int = 400
     condenser_lookback_days: int = 3
 
     seeds_dir: Path = REPO_ROOT / "db" / "seeds"

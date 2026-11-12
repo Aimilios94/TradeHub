@@ -23,7 +23,7 @@ The secret comes from `.env` and is passed into the n8n container by Compose.
 | `record_news` | Headlines for the watchlist from Finnhub, Yahoo RSS and Massive into `news_items`. Takes about 4 minutes: Massive allows 5 calls a minute | Phase 0.5 |
 | `record_bars` | Daily bars for every seeded ticker and intraday bars for the watchlist into `data/live/` | Phase 0.5 |
 | `record_cot` | CFTC COT history into `data/live/cot/` | Phase 0.5 |
-| `process_news` | Dedupe, driver tags, importance, Hermes condenser, StockTwits counts, daily scores. A few minutes with the OpenRouter model, up to about 25 with a local one (100 calls a run) | Phase 1 |
+| `process_news` | Dedupe, driver tags, importance, Hermes condenser, StockTwits counts, daily scores. About 10 to 25 minutes when a run uses its full 400 calls on the OpenRouter model; a local model is about ten times slower | Phase 1 |
 
 A job answers 200 when everything worked and 502, with the same body, when anything failed. A job that is already running answers 409.
 
