@@ -50,7 +50,7 @@ Nothing has been measured yet. This section will hold condenser accuracy, tagger
 Requirements: Docker, and an OpenRouter key in `.env`: the condenser sends headlines and short excerpts to OpenRouter (see `docs/PRIVACY.md`). Ollama on the host is optional: it is the local fallback when `OPENROUTER_MODEL_CHEAP` is empty, and nothing leaves the machine then. For development: [uv](https://docs.astral.sh/uv/) and Node 24.
 
 ```sh
-cp .env.example .env        # then fill in the keys and generate the three secrets
+cp .env.example .env        # fill in keys and the three secrets in .env only (CI rejects a filled secret in .env.example)
 docker compose up -d --build
 ```
 

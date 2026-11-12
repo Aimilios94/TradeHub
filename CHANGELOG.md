@@ -18,7 +18,8 @@ One entry per version. Phases of the MVP are listed under "Unreleased" until v1.
 - Golden day: 24 synthetic headlines and `expected.json` in `sample-data/golden_day/`, with a test.
 - Labeling tool `scripts/label_set.py`: draws the 100-item set, labels in the terminal, exports IDs and labels only.
 - Migration `0004`: `news_items.processed_at` and `importance_components`, `llm_traces.news_item_id`, tagger columns on `tagged_events`, table `social_sentiment`.
-- Tests: 206.
+- CI guard `scripts/check_env_example.py` (D59): `.env.example` holds placeholders only, and no local-only file is tracked.
+- Tests: 212.
 - Not done yet: the 100 labels (owner), and the acceptance run of 3 hands-off days.
 
 ### Phase 0.5 — Source validation and recording (2026-11-11)

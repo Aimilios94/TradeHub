@@ -49,6 +49,9 @@ jobs:
           uv run ruff check . ../db
           uv run ruff format --check . ../db
 
+      - name: No real values in .env.example, no local-only file in git
+        run: uv run python -m scripts.check_env_example
+
       - name: Migrations apply cleanly
         run: uv run alembic -c ../db/alembic.ini upgrade head
 
