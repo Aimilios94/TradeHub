@@ -2,7 +2,7 @@
 
 A personal web app that collects free market news and data, ranks what matters each day, has an LLM ("Hermes") explain it in plain words, and tests the owner's strategies on past data. Every trade is made by hand elsewhere: there is no broker connection and no live money in this app.
 
-**Status:** Phases 0 and 0.5 are complete. Phase 1 (the equities news pipeline) is built and waiting on its acceptance run: recorded headlines are deduplicated, tagged, ranked, condensed by a local model and turned into a daily score per ticker. None of it has been evaluated yet and there is no UI for it yet. The full plan is in [docs/PLAN.pdf](docs/PLAN.pdf).
+**Status:** Phases 0 and 0.5 are complete. Phase 1 (the equities news pipeline) is built and waiting on its acceptance run: recorded headlines are deduplicated, tagged, ranked, condensed by a cheap model on OpenRouter and turned into a daily score per ticker. None of it has been evaluated yet and there is no UI for it yet. The full plan is in [docs/PLAN.pdf](docs/PLAN.pdf).
 
 ## Principles
 

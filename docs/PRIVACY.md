@@ -13,7 +13,7 @@ TradeHub is a single-user app on the owner's own machine. It holds no personal d
 ## What leaves the machine
 
 - Requests to data providers, carrying that provider's API key.
-- News headlines and short excerpts sent to the LLM tier in use (OpenRouter, or local Ollama, which sends nothing out).
+- News headlines and short excerpts sent to the LLM tier in use. Since 2026-11-12 the condenser uses OpenRouter (D57), so headlines and excerpts leave the machine; local Ollama, when configured instead, sends nothing out.
 - Search queries sent by the self-hosted SearXNG to public search engines.
 
 ## Network exposure

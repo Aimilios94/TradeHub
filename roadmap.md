@@ -31,7 +31,7 @@ Six MVP phases over about 16 part-time weeks, then five later versions. A phase 
 
 - [x] Ingest adapters: Yahoo RSS, Finnhub news, StockTwits, SearXNG
 - [x] Dedupe, importance score, driver tagger v1
-- [x] Hermes condenser with Pydantic validation, one retry, `llm_traces` (on local Ollama until the Phase 4 model eval)
+- [x] Hermes condenser with Pydantic validation, one retry, `llm_traces` (provisional model, D57, until the Phase 4 model eval)
 - [x] Composite sentiment score per ticker per day
 - [ ] Start labeling 100 news items (set drawn and labeling tool built 2026-11-12; the labels are the owner's to make)
 - [x] Golden day committed (synthetic headlines; real news text is never committed)

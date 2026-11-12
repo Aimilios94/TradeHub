@@ -9,7 +9,7 @@ One entry per version. Phases of the MVP are listed under "Unreleased" until v1.
 - Dedupe across feeds: same or contained title within 72 hours writes `duplicate_of`. 17.7% of the first 1,563 recorded headlines were duplicates.
 - Driver tagger v1: keyword rules for the 7 tags in `backend/app/tagger/rules.json`, with direction and the scheduled flag, written to `tagged_events`.
 - Importance score v1 (0–100) with its components stored per headline; ranking of a day.
-- Hermes condenser (template 1): versioned prompt file, Pydantic schema, menu checks, number check, one retry with the reason, every call in `llm_traces`, daily and per-run caps, monthly budget stop. Runs on local Ollama until the Phase 4 model eval.
+- Hermes condenser (template 1): versioned prompt file, Pydantic schema, menu checks, number check, one retry with the reason, every call in `llm_traces`, daily and per-run caps, monthly budget stop. Ran on local Ollama `llama3.2` at first; since 2026-11-12 on `mistralai/mistral-small-3.2-24b-instruct` through OpenRouter (D57), provisional until the Phase 4 model eval.
 - Number check (`backend/app/hermes/number_check.py`) with the plan's rounding rule.
 - StockTwits adapter and one sample per ticker per day (counts only).
 - Composite sentiment score per ticker per day in `daily_scores`. Now `composite-v2` (D56): the driver input is scaled by the number of driver tags, so one tag no longer gives a ticker without headlines the full -100 or +100.
