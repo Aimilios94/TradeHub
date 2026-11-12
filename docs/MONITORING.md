@@ -50,7 +50,7 @@ SELECT created_at::date AS day,
 FROM llm_traces WHERE template = 'condenser' GROUP BY 1 ORDER BY 1;
 ```
 
-- The month's cost is the sum of `cost_usd` in `llm_traces`. A local Ollama call costs 0; a provider that reports no cost leaves the column empty rather than a guess.
+- The month's cost is the sum of `cost_usd` in `llm_traces`. The condenser's model is `mistralai/mistral-small-3.2-24b-instruct` on OpenRouter (D57), about $0.00009 a call. A local Ollama call costs 0; a provider that reports no cost leaves the column empty rather than a guess.
 
 ## Budget and caps (built, alert planned)
 
