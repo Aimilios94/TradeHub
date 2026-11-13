@@ -24,7 +24,7 @@ TradeHub is a single-user app on the owner's own machine. It holds no personal d
 
 ## Storage
 
-- PostgreSQL keeps headlines, links and short excerpts. Raw article text is pruned after 30 days.
+- PostgreSQL keeps headlines, links and short excerpts. No raw article text is stored, so nothing is pruned; the 30-day pruning in the plan applies only if raw text is ever stored.
 
 ## Sentry (optional, not enabled)
 

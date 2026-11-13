@@ -38,7 +38,7 @@ Six MVP phases over about 16 part-time weeks, then five later versions. A phase 
 
 **Accept:** 3 consecutive days of hands-off ingest; zero fabricated rows; dedupe rate sane; 100% of Hermes rows valid or logged as failures; golden-day test green.
 
-Acceptance state on 2026-11-12: golden-day test green; the 3 hands-off days start once the `process news` workflow is published in n8n.
+Acceptance state on 2026-11-13: golden-day test green; the `process news` workflow was published on 2026-11-12. Hands-off days so far: 0 of 3. 2026-11-12 does not count (a failed news run and manual runs), and 2026-11-13 does not count (the 13:00 UTC news run and the 13:15 UTC pipeline run failed with connection errors). The earliest possible day 1 is 2026-11-14.
 
 ### Phase 2 — Context layer + UI (weeks 7–9)
 
