@@ -20,10 +20,10 @@ The secret comes from `.env` and is passed into the n8n container by Compose.
 |---|---|---|
 | `selfcheck` | Confirms n8n can reach the API and the API can reach the database. Writes nothing | Phase 0 |
 | `check_sources` | One real call per source adapter; updates source health | Phase 0.5 |
-| `record_news` | Headlines for the watchlist from Finnhub, Yahoo RSS and Massive into `news_items`. Takes about 4 minutes: Massive allows 5 calls a minute | Phase 0.5 |
+| `record_news` | Headlines for the watchlist from Finnhub, Yahoo RSS and Massive into `news_items`. Takes about 4 minutes: Massive allows 5 calls a minute. When the network is down it waits 5 minutes and tries the failed calls again, 3 tries in all (D60), so a run can take about 15 to 20 minutes; the workflow's timeout is 30 minutes | Phase 0.5 |
 | `record_bars` | Daily bars for every seeded ticker and intraday bars for the watchlist into `data/live/` | Phase 0.5 |
 | `record_cot` | CFTC COT history into `data/live/cot/` | Phase 0.5 |
-| `process_news` | Dedupe, driver tags, importance, Hermes condenser, StockTwits counts, daily scores. About 10 to 25 minutes when a run uses its full 400 calls on the OpenRouter model; a local model is about ten times slower | Phase 1 |
+| `process_news` | Dedupe, driver tags, importance, Hermes condenser, StockTwits counts, daily scores. About 10 to 25 minutes when a run uses its full 400 calls on the OpenRouter model; a local model is about ten times slower. When the network is down the condenser waits 5 minutes and tries again, 3 tries in all (D60), which can add 10 minutes | Phase 1 |
 
 A job answers 200 when everything worked and 502, with the same body, when anything failed. A job that is already running answers 409.
 

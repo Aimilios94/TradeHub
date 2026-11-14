@@ -30,7 +30,7 @@
           ]
         },
         "options": {
-          "timeout": 600000
+          "timeout": 1800000
         }
       },
       "id": "thRecordNews0001-request",

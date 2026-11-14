@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     condenser_daily_cap: int = 1000
     condenser_run_cap: int = 400
     condenser_lookback_days: int = 3
+    # A call that got no answer because the network was down (no connection, no DNS, a timeout)
+    # is tried this many times in all, this many seconds apart, by record_news and the
+    # condenser (D60). 1 try means no retry.
+    network_retry_tries: int = 3
+    network_retry_wait_seconds: int = 300
 
     seeds_dir: Path = REPO_ROOT / "db" / "seeds"
     # Parquet recordings and frozen snapshots. Git-ignored; mounted from the host in Compose.

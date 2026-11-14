@@ -65,6 +65,8 @@ def process_news(
                 monthly_budget=settings.llm_monthly_budget_eur,
                 lookback=timedelta(days=settings.condenser_lookback_days),
                 now=now,
+                network_tries=settings.network_retry_tries,
+                network_wait=settings.network_retry_wait_seconds,
             )
         ),
         "social": _step(lambda: recorder.record_social(engine, adapters)),

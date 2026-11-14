@@ -42,7 +42,13 @@ def _check_sources() -> dict:
 
 
 def _record_news() -> dict:
-    return recorder.record_news(get_engine(), _adapters())
+    settings = get_settings()
+    return recorder.record_news(
+        get_engine(),
+        _adapters(),
+        network_tries=settings.network_retry_tries,
+        network_wait=settings.network_retry_wait_seconds,
+    )
 
 
 def _record_bars() -> dict:

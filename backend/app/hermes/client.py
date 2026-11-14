@@ -24,6 +24,13 @@ class LlmError(Exception):
     """The call itself failed (network, HTTP status, empty answer). Not a bad answer."""
 
 
+class LlmNetworkError(LlmError):
+    """The request never got an answer: no connection, no DNS, a timeout or a cut connection.
+
+    The condenser may wait and try such a call again (D60). An HTTP status is a plain LlmError.
+    """
+
+
 @dataclass(frozen=True)
 class LlmResult:
     text: str
@@ -44,7 +51,8 @@ def _post(client: httpx.Client, url: str, what: str, secret: str = "", **kwargs)
     try:
         response = client.post(url, timeout=LLM_TIMEOUT, **kwargs)
     except httpx.HTTPError as exc:
-        raise LlmError(scrub(f"{what}: {type(exc).__name__}: {exc}", (secret,))) from exc
+        kind = LlmNetworkError if isinstance(exc, httpx.TransportError) else LlmError
+        raise kind(scrub(f"{what}: {type(exc).__name__}: {exc}", (secret,))) from exc
     if response.status_code != 200:
         body = response.text[:300].replace("\n", " ")
         raise LlmError(scrub(f"{what}: HTTP {response.status_code}: {body}", (secret,)))

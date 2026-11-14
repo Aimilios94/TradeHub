@@ -6,6 +6,7 @@ health and zero fabricated rows.
 
 from datetime import UTC, date, datetime, timedelta
 
+import httpx
 import polars as pl
 import pytest
 from fastapi.testclient import TestClient
@@ -22,6 +23,8 @@ from app.ingest.base import (
     NewsHeadline,
     SourceAdapter,
     SourceError,
+    SourceNetworkError,
+    get_json,
 )
 from app.main import app
 from app.seeds import load_seeds
@@ -416,3 +419,79 @@ def test_source_meta_is_stored_with_the_headline(engine):
     # Nothing was written to TradeHub's own sentiment table.
     with engine.connect() as conn:
         assert conn.execute(text("SELECT count(*) FROM news_sentiment")).scalar() == 0
+
+
+# --- waiting for the network (D60) ----------------------------------------------------------
+
+
+def test_only_a_request_with_no_answer_is_a_network_error():
+    def refuse(request):
+        raise httpx.ConnectError("[Errno 111] Connection refused")
+
+    no_network = httpx.Client(transport=httpx.MockTransport(refuse))
+    with pytest.raises(SourceNetworkError, match="Fake: ConnectError"):
+        get_json(no_network, "https://example.com/x", what="Fake")
+    answered = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(503, text="x")))
+    with pytest.raises(SourceError, match="HTTP 503") as error:
+        get_json(answered, "https://example.com/x", what="Fake")
+    assert not isinstance(error.value, SourceNetworkError)
+
+
+class FlakyNews(FakeNews):
+    """A news source whose first `failures` calls get no answer from the network."""
+
+    def __init__(self, source_id, items_by_ticker=None, failures=0):
+        super().__init__(source_id, items_by_ticker)
+        self.failures = failures
+        self.calls = 0
+
+    def fetch_news(self, ticker, since):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise SourceNetworkError(
+                f"{self.source_id} {ticker.symbol}: ConnectError: [Errno 111] Connection refused"
+            )
+        return super().fetch_news(ticker, since)
+
+
+def retried_news(engine, finnhub) -> tuple[dict, list]:
+    adapters = {
+        "finnhub": finnhub,
+        "yahoo_rss": FakeNews("yahoo_rss"),
+        "massive": FakeNews("massive"),
+    }
+    waits = []
+    result = recorder.record_news(
+        engine, adapters, pause=0, network_tries=3, network_wait=300, sleep=waits.append
+    )
+    return result, waits
+
+
+def test_record_news_waits_for_the_network_and_then_stores_the_headlines(engine):
+    # The network is down for the whole first pass (16 watchlist tickers) and back afterwards.
+    finnhub = FlakyNews("finnhub", {"EQ:TSLA": [("Late story", "https://e.com/late")]}, failures=16)
+    result, waits = retried_news(engine, finnhub)
+    assert waits == [300] and result["network_waits"] == 1
+    assert result["ok"] is True and result["sources"]["finnhub"]["errors"] == []
+    assert result["sources"]["finnhub"]["calls_ok"] == 16 and finnhub.calls == 32
+    assert [row["title"] for row in news_rows(engine)] == ["Late story"]
+    row = source_row(engine, "finnhub")
+    assert row["last_success_at"] is not None and row["last_error"] is None
+
+
+def test_record_news_gives_the_real_error_when_the_network_stays_down(engine):
+    finnhub = FlakyNews("finnhub", {"EQ:TSLA": [("Never", "https://e.com/never")]}, failures=999)
+    result, waits = retried_news(engine, finnhub)
+    assert waits == [300, 300]  # 3 tries in all
+    # A retry round stops at its first call that still gets no answer: 16 + 1 + 1.
+    assert finnhub.calls == 18
+    assert result["ok"] is False and result["sources"]["finnhub"]["calls_ok"] == 0
+    assert news_rows(engine) == []  # nothing invented
+    row = source_row(engine, "finnhub")
+    assert row["last_error"].startswith("16 errors, first:")
+    assert "Connection refused" in row["last_error"]
+
+
+def test_record_news_never_waits_for_a_source_that_answered_with_an_error(engine):
+    result, waits = retried_news(engine, FakeNews("finnhub", fail_for="all"))  # HTTP 503
+    assert waits == [] and result["network_waits"] == 0 and result["ok"] is False

@@ -38,7 +38,7 @@ Six MVP phases over about 16 part-time weeks, then five later versions. A phase 
 
 **Accept:** 3 consecutive days of hands-off ingest; zero fabricated rows; dedupe rate sane; 100% of Hermes rows valid or logged as failures; golden-day test green.
 
-Acceptance state on 2026-11-13: golden-day test green; the `process news` workflow was published on 2026-11-12. Hands-off days so far: 0 of 3. 2026-11-12 does not count (a failed news run and manual runs), and 2026-11-13 does not count (the 13:00 UTC news run and the 13:15 UTC pipeline run failed with connection errors). The earliest possible day 1 is 2026-11-14.
+Acceptance state on 2026-11-14: golden-day test green; the `process news` workflow was published on 2026-11-12. Hands-off days so far: 0 of 3. 2026-11-12 does not count (a failed news run and manual runs), 2026-11-13 does not count (the 13:00 UTC news run and the 13:15 UTC pipeline run failed with connection errors), and 2026-11-14 does not count (the 07:15 UTC pipeline run failed when the internet connection dropped). Since 2026-11-14 a call that gets no answer from the network is tried 3 times, 5 minutes apart (D60). The earliest possible day 1 is 2026-11-15.
 
 ### Phase 2 — Context layer + UI (weeks 7–9)
 
@@ -65,7 +65,7 @@ Acceptance state on 2026-11-13: golden-day test green; the `process news` workfl
 
 - [ ] Condenser, model-comparison, tagger and number evals; baselines committed; cheap tier decided
 - [ ] Regression gate in CI with a mock
-- [ ] Retry and rate-limit guards, failure-injection tests, tested restore
+- [ ] Retry and rate-limit guards, failure-injection tests, tested restore (the wait for a network that is down exists since Phase 1 for `record_news` and the condenser, D60)
 - [ ] README Results section filled
 
 **MVP gate:** 5 hands-off weekdays; Dashboard shows market state at a glance; at least 4 strategies backtested reproducibly, one cross-checked; eval baselines committed; zero invented numbers shown; LLM cost under €5 for the month; every failure shows a real error.

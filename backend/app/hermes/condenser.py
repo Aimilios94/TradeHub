@@ -12,6 +12,8 @@ number it returns is its own sentiment score, and any figure in its text must be
 
 import json
 import re
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -21,7 +23,7 @@ from pydantic import ValidationError
 from sqlalchemy import Engine, bindparam, text
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.hermes.client import LlmClient, LlmError
+from app.hermes.client import LlmClient, LlmError, LlmNetworkError
 from app.hermes.number_check import check_numbers
 from app.hermes.schemas import CondenserOutput
 from app.hermes.trace import calls_today, cost_this_month_usd, write_trace
@@ -122,9 +124,10 @@ class Item:
 class _ModelDown(Exception):
     """The call itself failed. The item stays pending."""
 
-    def __init__(self, message: str, calls: int):
+    def __init__(self, message: str, calls: int, network: bool = False):
         super().__init__(message)
         self.calls = calls  # calls made for the item, the failed one included
+        self.network = network  # the request got no answer at all: worth waiting for
 
 
 def load_prompt(path: Path = PROMPT_FILE, version: str = PROMPT_VERSION) -> Prompt:
@@ -267,7 +270,7 @@ def condense_item(
         except LlmError as exc:
             with engine.begin() as conn:
                 write_trace(conn, **trace, attempt=attempt, outcome="error", error=str(exc))
-            raise _ModelDown(str(exc), calls) from exc
+            raise _ModelDown(str(exc), calls, isinstance(exc, LlmNetworkError)) from exc
         cost += result.cost_usd or 0.0
         outcome, output, reason = validate_answer(result.text, item, candidates)
         with engine.begin() as conn:
@@ -325,11 +328,20 @@ def condense_pending(
     lookback: timedelta,
     prompt: Prompt | None = None,
     now: datetime | None = None,
+    network_tries: int = 1,
+    network_wait: float = 0.0,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> dict:
     """Condense pending items, most important first, inside the daily cap and the month's budget.
 
     The budget is compared with the cost in US dollars as if it were euros. A dollar is worth
     less than a euro, so this stops slightly early, never late.
+
+    When a call gets no answer because the network is down, the run waits `network_wait` seconds
+    and tries the same item again, up to `network_tries` tries in all (D60). If the last try
+    fails too the run stops with the real error. Every failed try is an `error` row in
+    llm_traces and counts as a call. Any other failed call keeps the old rule: the item stays
+    pending and three failures in a row stop the run.
     """
     now = now or datetime.now(UTC)
     prompt = prompt or load_prompt()
@@ -352,10 +364,14 @@ def condense_pending(
         "calls": 0,
         "sentiment_rows": 0,
         "capped": None,
+        "network_waits": 0,
         "errors": [],
     }
     transport_errors = 0
-    for item in pending:
+    network_failures = 0  # in a row
+    queue = list(pending)
+    while queue:
+        item = queue[0]
         calls_left = min(daily_cap - used_today, run_cap) - result["calls"]
         if month_cost >= monthly_budget:
             result["capped"] = f"monthly budget reached ({month_cost:.4f} of {monthly_budget:g})"
@@ -369,6 +385,19 @@ def condense_pending(
             done = condense_item(engine, client, prompt, item, candidates, calls_left)
         except _ModelDown as exc:
             result["calls"] += exc.calls
+            if exc.network and network_tries > 1:
+                network_failures += 1
+                if network_failures < network_tries:
+                    result["network_waits"] += 1
+                    sleep(network_wait)
+                    continue  # the same item again
+                result["errors"].append(str(exc))
+                result["errors"].append(
+                    f"stopped after {network_failures} tries with no network "
+                    f"({network_wait:g} seconds apart)"
+                )
+                break
+            queue.pop(0)
             result["errors"].append(str(exc))
             transport_errors += 1
             if transport_errors >= MAX_TRANSPORT_ERRORS:
@@ -377,7 +406,9 @@ def condense_pending(
                 )
                 break
             continue
+        queue.pop(0)
         transport_errors = 0
+        network_failures = 0
         result["calls"] += done["calls"]
         result["sentiment_rows"] += done["rows"]
         month_cost += done["cost_usd"]

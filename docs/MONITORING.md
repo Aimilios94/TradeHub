@@ -21,6 +21,7 @@ What is watched and where to look. Items marked "planned" are designed but not b
 - `record_news`, `record_bars` and `record_cot` are triggered by n8n. Each answers with what was stored and every error.
 - A run with any failure answers HTTP 502, so it shows as a failed execution in n8n (Executions tab).
 - A job that is still running refuses a second trigger with HTTP 409.
+- Waiting for the network (D60): when a `record_news` call gets no answer at all (no connection, no DNS, a timeout), the job finishes its pass, waits 5 minutes and tries the failed calls again, 3 tries in all (`NETWORK_RETRY_TRIES`, `NETWORK_RETRY_WAIT_SECONDS`). The result's `network_waits` says how many times it waited. What still fails after the last try is an error as before. An HTTP error answer is never retried. `record_bars` and `record_cot` do not wait.
 
 ## Snapshots (built)
 
@@ -39,6 +40,7 @@ What is watched and where to look. Items marked "planned" are designed but not b
 - Every call is logged to `llm_traces`: template, prompt version, tier, model, attempt, latency, tokens, cost, outcome, and the news item it was for.
 - Outcomes: `ok`, `invalid_json`, `schema_failed`, `number_check_failed` (a rejected answer; the error column holds the reason), `error` (the call itself failed), `capped`.
 - A rejected answer is retried once. Two rejections leave the item without a row; nothing is stored from a rejected answer.
+- A call that gets no answer because the network is down is logged as `error`, then the condenser waits 5 minutes and tries the same headline again, 3 tries in all (D60). If the third try fails the run stops and the job answers 502. `condense.network_waits` in the job result says how many times it waited. Any other failed call (an HTTP status, an empty answer) is not waited for: three of those in a row stop the run.
 - Share of headlines that ended valid, per day:
 
 ```sql

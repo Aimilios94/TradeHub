@@ -37,6 +37,7 @@ sources ──> Python jobs ──> PostgreSQL (app data) ───────�
 ```
 
 - **n8n** only triggers jobs on a schedule. All logic is Python.
+- A call that gets no answer because the network is down is tried 3 times, 5 minutes apart, by the news recorder and the condenser before it is reported as a failure.
 - **PostgreSQL 16** runs in Docker, publishes no port, and holds app data only.
 - **Price and macro history** lives in frozen, versioned Parquet snapshots read through DuckDB.
 - Everything is stored in UTC.

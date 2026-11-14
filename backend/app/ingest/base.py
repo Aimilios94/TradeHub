@@ -64,6 +64,14 @@ class SourceError(Exception):
     """A source failed. The message is the real reason and is stored in sources.last_error."""
 
 
+class SourceNetworkError(SourceError):
+    """The request never got an answer: no connection, no DNS, a timeout or a cut connection.
+
+    A job may wait and try such a call again (D60). An HTTP status or a malformed answer is a
+    plain SourceError and is never retried.
+    """
+
+
 @dataclass(frozen=True)
 class TickerRef:
     """A row of the tickers table, as much as an adapter needs."""
@@ -190,7 +198,8 @@ def _get(client: httpx.Client, url: str, *, what: str, decode_json: bool = True,
     try:
         response = client.get(url, **kwargs)
     except httpx.HTTPError as exc:
-        raise SourceError(scrub(f"{what}: {type(exc).__name__}: {exc}")) from exc
+        kind = SourceNetworkError if isinstance(exc, httpx.TransportError) else SourceError
+        raise kind(scrub(f"{what}: {type(exc).__name__}: {exc}")) from exc
     if response.status_code != 200:
         body = response.text[:200].replace("\n", " ")
         raise SourceError(scrub(f"{what}: HTTP {response.status_code}: {body}"))

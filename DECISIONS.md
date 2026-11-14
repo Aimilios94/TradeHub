@@ -83,6 +83,12 @@ D46, D47 (with D56) and D54 hold starting values chosen by the agent. They are h
 | D58 | Condenser caps raised to 1,000 calls a UTC day and 400 a run (from 300 and 100). The 3-day lookback and the monthly budget stop are unchanged | Owner's decision, 2026-11-12. The old caps were sized for a 13-second local call and left most headlines unread: the first two days recorded 880 and 489 shown headlines. At about $0.00009 a call, a full 1,000-call day every day is about $2.7 a month, inside the €5 budget, which still stops the condenser when reached. A 400-call run takes about 10 to 25 minutes |
 | D59 | CI fails when `.env.example` holds a value for a variable named like a secret (KEY, SECRET, TOKEN, PASSWORD, DSN), when any other variable has a value without being on the allow-list in `backend/scripts/check_env_example.py`, or when `.env`, a handoff file, `data/` or `backups/` is tracked by git. The check never prints a value | Owner's decision, 2026-11-12, after an outside review: a leaked free-tier key is still a leaked key. The repo is public today |
 
+## Decided during the Phase 1 acceptance run (2026-11-14)
+
+| # | Decision | Reason |
+|---|---|---|
+| D60 | A call that gets no answer because the network is down (no connection, no DNS, a timeout, a cut connection) is tried again by `record_news` and by the condenser: 3 tries in all, 5 minutes apart (`NETWORK_RETRY_TRIES`, `NETWORK_RETRY_WAIT_SECONDS`). `record_news` retries only the calls that got no answer, and a retry round stops at its first call that still gets none. The condenser waits and tries the same headline again; if the third try fails the run stops. Every failed try is still an `error` row in `llm_traces`, and what still fails after the last try is reported with its real error and answers 502 as before. An answer that is an error (an HTTP status, a bot-check page, a malformed body) is never retried, so D52 is unchanged. `record_bars`, `record_cot` and StockTwits do not wait | Owner's decision, 2026-11-14. The house internet drops for short spells: on 2026-11-12, 2026-11-13 and 2026-11-14 one such drop failed a scheduled run (on 2026-11-14 the pipeline gave up within the minute the connection was cut). Waiting is automatic, so a day stays hands-off. A long outage still fails the run: nothing is hidden and nothing is invented. A run can take up to about 10 to 20 minutes longer while the network is down, so the `record news` workflow timeout in n8n is 30 minutes |
+
 ## Rejected
 
 | Item | Reason |

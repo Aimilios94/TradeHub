@@ -10,6 +10,7 @@ what was stored and every error; `ok` is false if anything failed.
 
 import hashlib
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -26,6 +27,7 @@ from app.ingest.base import (
     PositioningSource,
     SocialSource,
     SourceAdapter,
+    SourceNetworkError,
     TickerRef,
 )
 from app.ingest.cftc import SOURCE_KEY as CFTC_KEY
@@ -191,28 +193,72 @@ def check_sources(engine: Engine, adapters: dict[str, SourceAdapter]) -> dict:
 
 
 def record_news(
-    engine: Engine, adapters: dict[str, SourceAdapter], pause: float = PAUSE_SECONDS
+    engine: Engine,
+    adapters: dict[str, SourceAdapter],
+    pause: float = PAUSE_SECONDS,
+    network_tries: int = 1,
+    network_wait: float = 0.0,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> dict:
-    """Headlines for every watchlist ticker from each news source."""
+    """Headlines for every watchlist ticker from each news source.
+
+    A call that got no answer because the network was down (SourceNetworkError) is tried again
+    after `network_wait` seconds, up to `network_tries` tries in all (D60). A retry round stops
+    at its first call that still gets no answer. What is still failing after the last try is
+    reported with its real error, as before. Any other failure is never retried.
+    """
     now = datetime.now(UTC)
     tickers = load_tickers(engine, watchlist_only=True)
     active, skipped = _split_enabled(engine, NEWS_SOURCES)
-    sources = {}
-    for source_id in active:
+    outcomes = {source_id: _Outcome(engine, source_id) for source_id in active}
+
+    def fetch(source_id: str, ticker: TickerRef, at: datetime) -> BaseException | None:
+        """One call. Returns the error when the network gave no answer, else None."""
         adapter = adapters[source_id]
         assert isinstance(adapter, NewsSource)
-        outcome = _Outcome(engine, source_id)
+        outcome = outcomes[source_id]
+        try:
+            headlines = adapter.fetch_news(ticker, since=at - NEWS_LOOKBACK)
+            outcome.add("new_items", store_headlines(engine, source_id, headlines, at))
+            outcome.add("items_seen", len(headlines))
+            outcome.calls_ok += 1
+        except SourceNetworkError as exc:
+            return exc
+        except Exception as exc:
+            outcome.failed(exc)
+        return None
+
+    # No answer from the network so far: (source, ticker, the last error).
+    waiting: list[tuple[str, TickerRef, BaseException]] = []
+    for source_id in active:
         for ticker in tickers:
-            try:
-                headlines = adapter.fetch_news(ticker, since=now - NEWS_LOOKBACK)
-                outcome.add("new_items", store_headlines(engine, source_id, headlines, now))
-                outcome.add("items_seen", len(headlines))
-                outcome.calls_ok += 1
-            except Exception as exc:
-                outcome.failed(exc)
+            error = fetch(source_id, ticker, now)
+            if error is not None:
+                waiting.append((source_id, ticker, error))
             time.sleep(pause)
-        sources[source_id] = outcome.finish()
-    return _result(sources, skipped)
+
+    network_waits = 0
+    for _ in range(max(network_tries, 1) - 1):
+        if not waiting:
+            break
+        network_waits += 1
+        sleep(network_wait)
+        retried_at = datetime.now(UTC)  # a headline stored late carries the time it was stored
+        still_waiting: list[tuple[str, TickerRef, BaseException]] = []
+        for position, (source_id, ticker, _error) in enumerate(waiting):
+            error = fetch(source_id, ticker, retried_at)
+            if error is not None:
+                # Still no network: keep this call and the rest for the next round.
+                still_waiting = [(source_id, ticker, error), *waiting[position + 1 :]]
+                break
+            time.sleep(pause)
+        waiting = still_waiting
+
+    for source_id, _ticker, error in waiting:
+        outcomes[source_id].failed(error)
+    result = _result({source_id: outcomes[source_id].finish() for source_id in active}, skipped)
+    result["network_waits"] = network_waits
+    return result
 
 
 def _intraday_lookback(path: Path, interval: str, now: datetime) -> int:

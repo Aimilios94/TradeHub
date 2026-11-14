@@ -15,6 +15,7 @@ from app.config import Settings
 from app.hermes import condenser
 from app.hermes.client import (
     LlmError,
+    LlmNetworkError,
     MockClient,
     OllamaClient,
     OpenRouterClient,
@@ -467,3 +468,84 @@ def test_hermes_fills_a_direction_only_where_the_code_left_zero(pipeline_engine)
         "https://example.com/i1": (-1, "hermes"),  # topic only: Hermes filled the direction
         "https://example.com/i2": (1, "code"),  # the code's direction is never overwritten
     }
+
+
+# --- waiting for the network (D60) ----------------------------------------------------------
+
+
+def test_only_a_call_with_no_answer_is_a_network_error():
+    def refuse(request):
+        raise httpx.ConnectError("[Errno 111] Connection refused")
+
+    with pytest.raises(LlmNetworkError, match="ConnectError"):
+        OpenRouterClient(http_client(refuse), "k" * 20, "m", "cheap").complete("s", "u")
+    answered = OpenRouterClient(
+        http_client(lambda request: httpx.Response(503, text="busy")), "k" * 20, "m", "cheap"
+    )
+    with pytest.raises(LlmError) as error:
+        answered.complete("s", "u")
+    assert not isinstance(error.value, LlmNetworkError)
+
+
+def flaky(failures: int):
+    """A model whose first `failures` calls get no answer from the network."""
+    left = [failures]
+
+    def respond(system, user):
+        if left[0] > 0:
+            left[0] -= 1
+            raise LlmNetworkError(
+                "OpenRouter m: ConnectError: [Errno -2] Name or service not known"
+            )
+        return answer()
+
+    return MockClient(respond)
+
+
+def stored_stories(engine, count: int) -> None:
+    store(
+        engine,
+        *[
+            (f"Alpha story number {n}", f"https://example.com/n{n}", ("EQ:TSLA",))
+            for n in range(count)
+        ],
+    )
+    process_new_items(engine, now=NOW)
+
+
+def test_the_condenser_waits_for_the_network_and_then_carries_on(pipeline_engine):
+    stored_stories(pipeline_engine, 3)
+    waits = []
+    result = run(pipeline_engine, flaky(2), network_tries=3, network_wait=300, sleep=waits.append)
+    assert waits == [300, 300] and result["network_waits"] == 2
+    assert result["ok"] is True and result["errors"] == []
+    assert result["condensed"] == 3 and result["calls"] == 5  # 2 with no answer, 3 answered
+    outcomes = [t["outcome"] for t in rows(pipeline_engine, TRACES)]
+    assert outcomes == ["error", "error", "ok", "ok", "ok"]  # every failed try is logged
+
+
+def test_the_condenser_stops_with_the_real_error_when_the_network_stays_down(pipeline_engine):
+    stored_stories(pipeline_engine, 3)
+    waits = []
+    result = run(pipeline_engine, flaky(99), network_tries=3, network_wait=300, sleep=waits.append)
+    assert waits == [300, 300]  # 3 tries in all, then it gives up
+    assert result["ok"] is False and result["calls"] == 3 and result["condensed"] == 0
+    assert "Name or service not known" in result["errors"][0]
+    assert "3 tries with no network" in result["errors"][-1]
+    assert rows(pipeline_engine, SENTIMENT) == []  # nothing invented
+    assert run(pipeline_engine, MockClient(lambda s, u: answer()))["condensed"] == 3
+
+
+def test_a_failed_call_that_is_not_the_network_is_never_waited_for(pipeline_engine):
+    stored_stories(pipeline_engine, 5)
+    waits = []
+
+    def refused(system, user):
+        raise LlmError("OpenRouter m: HTTP 401: bad key")
+
+    result = run(
+        pipeline_engine, MockClient(refused), network_tries=3, network_wait=300, sleep=waits.append
+    )
+    assert waits == [] and result["network_waits"] == 0
+    assert result["calls"] == condenser.MAX_TRANSPORT_ERRORS
+    assert "model is down" in result["errors"][-1]
